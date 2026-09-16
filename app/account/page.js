@@ -139,7 +139,7 @@ export default function AccountPage() {
       alert('Supabase credentials not found in environment variables (.env / Vercel).');
       return;
     }
-    const redirectUrl = `${window.location.origin}/auth/callback`;
+    const redirectUrl = `${window.location.origin}/auth/callback?next=/account`;
     await supabase.auth.signInWithOAuth({
       provider: 'discord',
       options: { redirectTo: redirectUrl }
