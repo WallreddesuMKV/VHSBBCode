@@ -237,11 +237,9 @@ export default function AccountPage() {
             </div>
             <div className="profile-info">
               <h2>{user ? user.username : 'Guest Session'}</h2>
-              <p>
-                {user 
-                  ?  
-                  : 'Login with Discord to sync saved BBCodes & personal API keys across your devices.'}
-              </p>
+              {!user && (
+                <p>Login with Discord to sync saved BBCodes &amp; personal API keys across your devices.</p>
+              )}
             </div>
           </div>
           <div>
