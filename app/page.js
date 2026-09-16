@@ -253,7 +253,7 @@ export default function Home() {
     return () => window.removeEventListener('bbcode-lang-change', onLangChange);
   }, [t.load_success]);
 
-  function handleUserAuth(client, authUser) {
+  async function handleUserAuth(client, authUser) {
     const u = {
       id: authUser.id,
       username: authUser.user_metadata?.custom_claims?.global_name ||
@@ -265,26 +265,64 @@ export default function Home() {
     };
     setUser(u);
 
-    const userKeys = localStorage.getItem(`bbcode_api_keys_${u.id}`);
-    if (userKeys) {
+    // 1. Fetch user-specific API keys from Supabase
+    let cloudKeys = null;
+    try {
+      const { data, error } = await client
+        .from('user_api_keys')
+        .select('*')
+        .eq('user_id', u.id)
+        .maybeSingle();
+
+      if (!error && data && (data.ptscreens_api_key || data.imgbb_api_key)) {
+        cloudKeys = {
+          ptscreens: data.ptscreens_api_key || data.ptscreens_key || '',
+          imgbb: data.imgbb_api_key || data.imgbb_key || '',
+          defaultUploader: data.default_uploader || 'ptscreens'
+        };
+      }
+    } catch (e) {
+      console.warn('Error fetching keys from Supabase:', e);
+    }
+
+    if (cloudKeys) {
+      setApiKeys(cloudKeys);
+      if (cloudKeys.defaultUploader) setUploadHost(cloudKeys.defaultUploader);
+      localStorage.setItem(`bbcode_api_keys_${u.id}`, JSON.stringify(cloudKeys));
+      localStorage.setItem('bbcode_api_keys_active', JSON.stringify(cloudKeys));
+      return;
+    }
+
+    // 2. If Supabase has no keys yet, check browser cache & auto-sync to Supabase
+    const cached = localStorage.getItem(`bbcode_api_keys_${u.id}`) ||
+                   localStorage.getItem('bbcode_api_keys_active') ||
+                   localStorage.getItem('bbcode_api_keys_guest');
+    if (cached) {
       try {
-        const parsed = JSON.parse(userKeys);
-        setApiKeys(parsed);
-        if (parsed.defaultUploader) setUploadHost(parsed.defaultUploader);
-      } catch (e) {}
-    } else {
-      client.from('user_api_keys').select('*').single().then(({ data }) => {
-        if (data) {
-          const loaded = {
-            ptscreens: data.ptscreens_key || '',
-            imgbb: data.imgbb_key || '',
-            defaultUploader: data.default_uploader || 'ptscreens'
+        const parsed = JSON.parse(cached);
+        if (parsed && (parsed.ptscreens || parsed.imgbb)) {
+          const keysToSync = {
+            ptscreens: parsed.ptscreens?.trim() || '',
+            imgbb: parsed.imgbb?.trim() || '',
+            defaultUploader: parsed.defaultUploader || 'ptscreens'
           };
-          setApiKeys(loaded);
-          if (loaded.defaultUploader) setUploadHost(loaded.defaultUploader);
-          localStorage.setItem(`bbcode_api_keys_${u.id}`, JSON.stringify(loaded));
+          setApiKeys(keysToSync);
+          if (keysToSync.defaultUploader) setUploadHost(keysToSync.defaultUploader);
+          localStorage.setItem(`bbcode_api_keys_${u.id}`, JSON.stringify(keysToSync));
+          localStorage.setItem('bbcode_api_keys_active', JSON.stringify(keysToSync));
+
+          // Auto-upsert to Supabase
+          await client.from('user_api_keys').upsert({
+            user_id: u.id,
+            ptscreens_api_key: keysToSync.ptscreens,
+            imgbb_api_key: keysToSync.imgbb,
+            default_uploader: keysToSync.defaultUploader,
+            updated_at: new Date().toISOString()
+          }, { onConflict: 'user_id' });
         }
-      });
+      } catch (e) {
+        console.warn('Error syncing cached keys in handleUserAuth:', e);
+      }
     }
   }
 
