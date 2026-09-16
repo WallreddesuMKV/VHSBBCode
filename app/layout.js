@@ -1,8 +1,8 @@
 import './globals.css';
 
 export const metadata = {
-  title: 'BBCode Gen — VHSTaPE',
-  description: 'Fast, secure BBCode generator for scene and repack releases with multi-store metadata fetching, image uploaders, and Discord cloud sync.',
+  title: 'BBCode Gen - VHSBB',
+  description: 'BBCode Generator for VHSTaPE Repacker.',
 };
 
 export const viewport = {
