@@ -239,7 +239,7 @@ export default function AccountPage() {
               <h2>{user ? user.username : 'Guest Session'}</h2>
               <p>
                 {user 
-                  ? `Discord ID: ${user.discord_id} · Supabase Cloud Sync Active` 
+                  ?  
                   : 'Login with Discord to sync saved BBCodes & personal API keys across your devices.'}
               </p>
             </div>
