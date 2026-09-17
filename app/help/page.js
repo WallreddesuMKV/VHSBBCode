@@ -12,7 +12,7 @@ export default function HelpPage() {
         <div className="neo-card">
           <div className="neo-card-header">
             <span className="neo-card-title">
-              Documentation & BBCode Guide
+              Documentation
             </span>
             <Link href="/" className="neo-btn neo-btn-subtle" style={{ padding: '4px 10px', fontSize: 11 }}>
               <IconGenerator size={12} />
@@ -129,10 +129,10 @@ export default function HelpPage() {
             {/* Section 4: Account Isolation */}
             <div>
               <h3 style={{ fontFamily: 'var(--font-display)', fontSize: 14, color: 'var(--accent)', textTransform: 'uppercase', marginBottom: 12 }}>
-                4. Account Isolation & Cloud Sync
+                4. Account
               </h3>
               <p style={{ color: 'var(--text-dim)', lineHeight: 1.6 }}>
-                Connect your Discord account in the <Link href="/account" style={{ color: 'var(--accent)', textDecoration: 'underline' }}>Account</Link> tab. Supabase Row Level Security (RLS) ensures that all saved releases and personal API keys are isolated to your unique Discord user ID.
+                Connect your Discord account in the <Link href="/account" style={{ color: 'var(--accent)', textDecoration: 'underline' }}>Account</Link> tab.
               </p>
             </div>
           </div>
