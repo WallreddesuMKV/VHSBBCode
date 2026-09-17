@@ -219,10 +219,10 @@ export default function AccountPage() {
 
         if (error) {
           console.error('Supabase user_api_keys upsert error:', error);
-          showToast('Failed to save to Supabase: ' + (error.message || 'RLS / column error'), 'error');
+          showToast('Failed to save to your account ');
           return;
         }
-        showToast('API keys saved to cloud account (Supabase).', 'success');
+        showToast('API keys saved to your account.', 'success');
         return;
       } catch (err) {
         console.error('handleSaveApiKeys err:', err);
