@@ -70,8 +70,21 @@ export function computeLanguageString(d) {
   return 'MULTi' + lCount;
 }
 
+/* ===== Steam API response parser ===== */
+export function parseSteamResponse(data, appid) {
+  if (!data || typeof data !== 'object') return null;
+  const root = (data.data && typeof data.data === 'object' && !data.data.name) ? data.data : data;
+  return root[appid] ||
+    Object.values(root).find(v => v?.data?.steam_appid == appid) ||
+    Object.values(root).find(v => v && typeof v === 'object' && v.success) ||
+    Object.values(root)[0] ||
+    null;
+}
+
 /* ===== 1. Fetch Steam Data from script.js lines 239-398 ===== */
-export async function fetchSteamData(appid, onProgress) {
+export async function fetchSteamData(appidInput, onProgress) {
+  const appidMatch = String(appidInput || '').trim().match(/(?:appids?\/|appids?=|\/app\/|^)(\d+)/i) || String(appidInput || '').match(/(\d+)/);
+  const appid = appidMatch ? appidMatch[1] : String(appidInput || '').trim();
   if (!appid) throw new Error('Please enter a numeric Steam App ID.');
 
   onProgress?.('Fetching from Steam API...', 'loading');
@@ -91,7 +104,7 @@ export async function fetchSteamData(appid, onProgress) {
     throw new Error('Invalid response from Steam API.');
   }
 
-  const game = (data.data && data.data[appid]) || data[appid];
+  const game = parseSteamResponse(data, appid);
   if (!game || !game.success) {
     throw new Error('Game not found on Steam Store API.');
   }
@@ -162,7 +175,8 @@ export async function fetchSteamData(appid, onProgress) {
     const cmdRes = await fetch('https://api.steamcmd.net/v1/info/' + appid);
     if (cmdRes.ok) {
       steamCmdData = await cmdRes.json();
-      const bId = steamCmdData?.data?.[appid]?.depots?.branches?.public?.buildid;
+      const cmdApp = steamCmdData?.data?.[appid] || (steamCmdData?.data && Object.values(steamCmdData.data)[0]);
+      const bId = cmdApp?.depots?.branches?.public?.buildid;
       if (bId) buildId = String(bId);
     }
   } catch (e) {}
@@ -191,10 +205,11 @@ export async function fetchSteamData(appid, onProgress) {
   // Auto-fetch Included Content (DLCs) - NO LIMITATION
   let dlcIds = [];
   let includedContent = '';
+  const cmdApp = steamCmdData?.data?.[appid] || (steamCmdData?.data && Object.values(steamCmdData.data)[0]);
   if (d.dlc && Array.isArray(d.dlc) && d.dlc.length > 0) {
     dlcIds = d.dlc;
-  } else if (steamCmdData?.data?.[appid]?.extended?.listofdlc) {
-    dlcIds = String(steamCmdData.data[appid].extended.listofdlc).split(',').map(s => s.trim()).filter(Boolean);
+  } else if (cmdApp?.extended?.listofdlc) {
+    dlcIds = String(cmdApp.extended.listofdlc).split(',').map(s => s.trim()).filter(Boolean);
   }
 
   if (dlcIds.length > 0) {
@@ -208,7 +223,7 @@ export async function fetchSteamData(appid, onProgress) {
           try {
             const res = await fetchViaProxy('https://store.steampowered.com/api/appdetails?appids=' + id + '&l=english');
             const parsed = JSON.parse(res);
-            const item = (parsed.data && parsed.data[id]) || parsed[id];
+            const item = parseSteamResponse(parsed, id);
             return item?.data?.name || null;
           } catch (e) {
             return null;
