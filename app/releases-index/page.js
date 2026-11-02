@@ -289,7 +289,6 @@ export default function ReleasesIndexPage() {
                   Forum Releases Index Settings
                 </span>
                 <span className="source-tag" style={{ background: 'var(--accent-soft)', color: 'var(--accent)', border: '1px solid var(--accent-border)' }}>
-                  phpBB Forum Crawler
                 </span>
               </div>
               <div className="neo-card-body">
