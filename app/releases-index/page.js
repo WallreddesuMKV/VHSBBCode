@@ -302,17 +302,6 @@ export default function ReleasesIndexPage() {
                 <span className="neo-card-title">
                   <IconIndex size={15} style={{ color: 'var(--accent)' }} />
                   FORUM CRAWLER SETTINGS
-                </span>
-                <span
-                  className="source-tag"
-                  style={{
-                    background: 'var(--accent-soft)',
-                    color: 'var(--accent)',
-                    border: '1px solid var(--accent-border)'
-                  }}
-                >
-                  FORUM: VHSTAPE REPACKS
-                </span>
               </div>
 
               <div className="neo-card-body">
