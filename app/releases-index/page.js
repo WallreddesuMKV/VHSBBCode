@@ -31,6 +31,7 @@ export default function ReleasesIndexPage() {
   const [result, setResult] = useState(null);
   const [activeSection, setActiveSection] = useState('all');
   const [activeView, setActiveView] = useState('bbcode'); // 'bbcode' | 'preview'
+  const [searchFilter, setSearchFilter] = useState('');
   const [copied, setCopied] = useState(false);
 
   // Initialize Supabase Auth
@@ -102,7 +103,7 @@ export default function ReleasesIndexPage() {
 
   async function handleGenerate() {
     setIsGenerating(true);
-    setStatusMsg({ text: 'Fetching forum pages and organizing releases... Please wait.', type: 'info' });
+    setStatusMsg({ text: 'Crawling VHSTaPE forum pages and formatting releases... Please wait.', type: 'info' });
 
     try {
       const headers = { 'Content-Type': 'application/json' };
@@ -211,19 +212,91 @@ export default function ReleasesIndexPage() {
 
   function getDisplayedBBCode() {
     if (!result) return '';
-    if (activeSection === 'all') return result.bbcode;
+    if (activeSection === 'all' && !searchFilter) return result.bbcode;
 
-    // Filter to specific section
-    const list = result.groups[activeSection] || [];
-    let b = `[b][size=150][ ${activeSection} ][/size][/b]\r\n`;
-    b += list.map(t => `[url=https://vhstaperepacks.com/viewtopic.php?t=${t.id}]${t.title}[/url]`).join('\r\n');
-    return b;
+    const sectionsToRender = activeSection === 'all' ? result.sectionKeys : [activeSection];
+    const chunks = [];
+
+    if (includeHeader && activeSection === 'all' && !searchFilter) {
+      chunks.push('[size=200]VHS TAPE Releases A-Z[/size]\r\n[b]Info: This Topic Will be Updated every once in a week, you can find all of our releases at this single topic.[/b]\r\n\r\n\r\n\r\n');
+    }
+
+    for (const k of sectionsToRender) {
+      let list = result.groups[k] || [];
+      if (searchFilter) {
+        const q = searchFilter.toLowerCase();
+        list = list.filter(t => t.title.toLowerCase().includes(q));
+      }
+      if (list.length > 0) {
+        let b = `[b][size=150][ ${k} ][/size][/b]\r\n`;
+        b += list.map(t => `[url=https://vhstaperepacks.com/viewtopic.php?t=${t.id}]${t.title}[/url]`).join('\r\n');
+        chunks.push(b);
+      }
+    }
+
+    return chunks.join('\r\n\r\n');
   }
+
+  // Filtered groups for preview
+  const previewSections = result ? (activeSection === 'all' ? result.sectionKeys : [activeSection]) : [];
 
   return (
     <>
       <Header />
       <main className="main-layout">
+        {/* Profile / Auth Banner (Consistent across entire app) */}
+        <div className="profile-banner">
+          <div className="profile-meta">
+            <div
+              className="profile-avatar"
+              style={{ borderColor: user ? 'var(--accent)' : 'var(--border-hover)' }}
+            >
+              {user?.avatar ? (
+                <img src={user.avatar} alt={user.username} />
+              ) : (
+                <IconLock size={20} />
+              )}
+            </div>
+            <div className="profile-info">
+              <h2>{user ? user.username : 'Guest Session — Auth Restricted'}</h2>
+              <p>
+                {user
+                  ? 'Authorized Repacker account. You have full access to the Releases Index Generator.'
+                  : 'Login with Discord to crawl VHSTaPE Game Releases and generate the alphabetized BBCode index.'}
+              </p>
+            </div>
+          </div>
+          <div>
+            {user ? (
+              <span
+                className="source-tag"
+                style={{
+                  background: 'var(--success-soft)',
+                  color: 'var(--success)',
+                  border: '1px solid var(--success)',
+                  padding: '6px 12px',
+                  fontSize: 11
+                }}
+              >
+                <IconCheck size={12} style={{ display: 'inline', marginRight: 5, verticalAlign: -1 }} />
+                AUTHORIZED MEMBER
+              </span>
+            ) : (
+              <button className="neo-btn neo-btn-discord" onClick={handleDiscordLogin}>
+                <IconDiscord size={15} />
+                Login with Discord
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Status Notification Toast */}
+        {statusMsg.text && (
+          <div className={`status-banner show ${statusMsg.type}`} style={{ marginBottom: 18 }}>
+            {statusMsg.text}
+          </div>
+        )}
+
         {/* Loading Auth State */}
         {loadingAuth ? (
           <div className="neo-card" style={{ maxWidth: 480, margin: '60px auto', textAlign: 'center', padding: 40 }}>
@@ -232,116 +305,89 @@ export default function ReleasesIndexPage() {
               Verifying authentication status...
             </p>
           </div>
-        ) : !user && process.env.NEXT_PUBLIC_SUPABASE_URL ? (
-          /* Auth Gate Card (Non-authenticated Users) */
-          <div className="auth-gate-card">
-            <div className="auth-gate-icon">
-              <IconLock size={26} />
-            </div>
-            <h2 className="auth-gate-title">Authentication Required</h2>
-            <p className="auth-gate-desc">
-              The <strong>VHSTaPE Releases Index Generator</strong> is restricted to authorized members only.
-              Please sign in with Discord to access forum crawling and index generation.
-            </p>
-            <div>
-              <button className="neo-btn neo-btn-discord" onClick={handleDiscordLogin} style={{ margin: '0 auto' }}>
-                <IconDiscord size={16} />
-                Login with Discord to Access
-              </button>
-            </div>
-          </div>
-        ) : (
-          /* Authenticated Releases Index Generator Interface */
+        ) : !user ? null : (
+          /* =========================================================
+             Releases Index Generator Interface (Authorized Members)
+             ========================================================= */
           <div>
-            {/* User Greeting Banner */}
-            {user && (
-              <div className="profile-banner" style={{ marginBottom: 20 }}>
-                <div className="profile-meta">
-                  <div className="profile-avatar">
-                    {user.avatar ? (
-                      <img src={user.avatar} alt={user.username} />
-                    ) : (
-                      <IconIndex size={24} />
-                    )}
-                  </div>
-                  <div className="profile-info">
-                    <h2>Releases Index Generator</h2>
-                    <p>
-                      Authorized as <strong style={{ color: 'var(--text-white)' }}>{user.username}</strong>. Auto-crawls VHSTaPE Game Releases forum and formats alphabetized BBCode.
-                    </p>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Notification Toast */}
-            {statusMsg.text && (
-              <div className={`status-banner show ${statusMsg.type}`} style={{ marginBottom: 18 }}>
-                {statusMsg.text}
-              </div>
-            )}
-
-            {/* Generator Configuration Card */}
+            {/* Card 1: Configuration & Crawler Settings */}
             <div className="neo-card" style={{ marginBottom: 20 }}>
               <div className="neo-card-header">
                 <span className="neo-card-title">
-                  <IconIndex size={14} style={{ display: 'inline', marginRight: 6, verticalAlign: -2 }} />
-                  Forum Releases Index Settings
+                  <IconIndex size={15} style={{ color: 'var(--accent)' }} />
+                  FORUM CRAWLER SETTINGS
                 </span>
-                <span className="source-tag" style={{ background: 'var(--accent-soft)', color: 'var(--accent)', border: '1px solid var(--accent-border)' }}>
+                <span
+                  className="source-tag"
+                  style={{
+                    background: 'var(--accent-soft)',
+                    color: 'var(--accent)',
+                    border: '1px solid var(--accent-border)'
+                  }}
+                >
+                  FORUM: VHSTAPE REPACKS
                 </span>
               </div>
+
               <div className="neo-card-body">
                 <div className="form-field" style={{ marginBottom: 16 }}>
                   <label className="form-label">VHSTaPE Releases Forum URL</label>
-                  <input
-                    type="text"
-                    className="mono"
-                    value={forumUrl}
-                    onChange={e => setForumUrl(e.target.value)}
-                    placeholder="https://vhstaperepacks.com/viewforum.php?f=6&s"
-                  />
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <input
+                      type="text"
+                      className="mono"
+                      value={forumUrl}
+                      onChange={e => setForumUrl(e.target.value)}
+                      placeholder="https://vhstaperepacks.com/viewforum.php?f=6&s"
+                    />
+                    <button
+                      className="neo-btn neo-btn-subtle"
+                      style={{ padding: '6px 12px', fontSize: 11 }}
+                      onClick={() => setForumUrl('https://vhstaperepacks.com/viewforum.php?f=6&s')}
+                      title="Reset URL"
+                    >
+                      Reset
+                    </button>
+                  </div>
                   <p className="field-hint">
-                    Target URL defaults to <code>https://vhstaperepacks.com/viewforum.php?f=6&amp;s</code> (sorted by subject A-Z).
+                    Default target: <code>https://vhstaperepacks.com/viewforum.php?f=6&amp;s</code> (sorted by subject A-Z).
                   </p>
                 </div>
 
-                {/* Scope Selection */}
-                <div className="form-field" style={{ marginBottom: 16 }}>
+                {/* Scope Selection: Neo Segmented Switch */}
+                <div className="form-field" style={{ marginBottom: 18 }}>
                   <label className="form-label">Crawl Scope</label>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 14, marginTop: 6 }}>
-                    <label className="checkbox-inline">
-                      <input
-                        type="radio"
-                        name="crawlScope"
-                        checked={scope === 'all'}
-                        onChange={() => setScope('all')}
-                      />
-                      <span>Complete Forum Index (All 700+ releases)</span>
-                    </label>
-                    <label className="checkbox-inline">
-                      <input
-                        type="radio"
-                        name="crawlScope"
-                        checked={scope === 'p1'}
-                        onChange={() => setScope('p1')}
-                      />
-                      <span>Quick Test (Page 1 only / 25 topics)</span>
-                    </label>
-                    <label className="checkbox-inline">
-                      <input
-                        type="radio"
-                        name="crawlScope"
-                        checked={scope === 'custom'}
-                        onChange={() => setScope('custom')}
-                      />
-                      <span>Custom Page Range</span>
-                    </label>
+                  <div
+                    className="source-switch"
+                    style={{
+                      maxWidth: 580,
+                      gridTemplateColumns: '1.2fr 1fr 1fr',
+                      marginBottom: 10
+                    }}
+                  >
+                    <button
+                      className={`source-btn ${scope === 'all' ? 'active' : ''}`}
+                      onClick={() => setScope('all')}
+                    >
+                      All Pages (770+ Topics)
+                    </button>
+                    <button
+                      className={`source-btn ${scope === 'p1' ? 'active' : ''}`}
+                      onClick={() => setScope('p1')}
+                    >
+                      Page 1 Test (25)
+                    </button>
+                    <button
+                      className={`source-btn ${scope === 'custom' ? 'active' : ''}`}
+                      onClick={() => setScope('custom')}
+                    >
+                      Custom Range
+                    </button>
                   </div>
 
                   {scope === 'custom' && (
-                    <div style={{ display: 'flex', gap: 12, marginTop: 12, alignItems: 'center' }}>
-                      <div>
+                    <div style={{ display: 'flex', gap: 14, marginTop: 10, alignItems: 'center' }}>
+                      <div style={{ width: 140 }}>
                         <label className="form-label" style={{ fontSize: 11 }}>Start Page</label>
                         <input
                           type="number"
@@ -349,26 +395,24 @@ export default function ReleasesIndexPage() {
                           max="50"
                           value={customStart}
                           onChange={e => setCustomStart(e.target.value)}
-                          style={{ width: 100 }}
                         />
                       </div>
-                      <div>
+                      <div style={{ width: 140 }}>
                         <label className="form-label" style={{ fontSize: 11 }}>Pages Count</label>
                         <input
                           type="number"
                           min="1"
-                          max="35"
+                          max="40"
                           value={customPages}
                           onChange={e => setCustomPages(e.target.value)}
-                          style={{ width: 100 }}
                         />
                       </div>
                     </div>
                   )}
                 </div>
 
-                {/* Header Option */}
-                <div className="form-field" style={{ marginBottom: 20 }}>
+                {/* Options Checkbox */}
+                <div className="form-field" style={{ marginBottom: 22 }}>
                   <label className="checkbox-inline">
                     <input
                       type="checkbox"
@@ -376,7 +420,7 @@ export default function ReleasesIndexPage() {
                       onChange={e => setIncludeHeader(e.target.checked)}
                     />
                     <span>
-                      Include Thread Header (<code>[size=200]VHS TAPE Releases A-Z[/size]</code>)
+                      Include Header Thread Banner (<code>[size=200]VHS TAPE Releases A-Z[/size]</code>)
                     </span>
                   </label>
                 </div>
@@ -387,16 +431,16 @@ export default function ReleasesIndexPage() {
                     className="neo-btn neo-btn-primary"
                     disabled={isGenerating}
                     onClick={handleGenerate}
-                    style={{ minWidth: 200 }}
+                    style={{ minWidth: 240, padding: '10px 24px', fontSize: 13 }}
                   >
                     {isGenerating ? (
                       <>
-                        <div className="spinner" style={{ width: 12, height: 12, borderWidth: 2 }} />
-                        Crawling Forum...
+                        <div className="spinner" style={{ width: 13, height: 13, borderWidth: 2 }} />
+                        Crawling Forum Releases...
                       </>
                     ) : (
                       <>
-                        <IconIndex size={14} />
+                        <IconIndex size={16} />
                         Generate Releases Index
                       </>
                     )}
@@ -405,20 +449,21 @@ export default function ReleasesIndexPage() {
               </div>
             </div>
 
-            {/* Result BBCode Output Card */}
+            {/* Card 2: Generated Index Directory & Output */}
             {result && (
               <div className="neo-card">
                 <div className="neo-card-header">
                   <div>
                     <span className="neo-card-title">
-                      BBCode Index Output
+                      BBCODE INDEX DIRECTORY
                     </span>
                     <span style={{ fontSize: 11.5, color: 'var(--text-dim)', marginLeft: 10 }}>
-                      ({result.totalTopics} releases across {result.sectionKeys.length} sections)
+                      ({result.totalTopics} releases indexed across {result.sectionKeys.length} letter groups)
                     </span>
                   </div>
 
                   <div style={{ display: 'flex', gap: 8 }}>
+                    {/* View Switch */}
                     <div className="source-switch" style={{ width: 160, margin: 0 }}>
                       <button
                         className={`source-btn ${activeView === 'bbcode' ? 'active' : ''}`}
@@ -463,6 +508,28 @@ export default function ReleasesIndexPage() {
                 </div>
 
                 <div className="neo-card-body">
+                  {/* Search Filter & Letter Quick Jumper */}
+                  <div style={{ display: 'flex', gap: 12, marginBottom: 14, flexWrap: 'wrap', alignItems: 'center' }}>
+                    <div style={{ flex: '1 1 240px', maxWidth: 320 }}>
+                      <input
+                        type="text"
+                        placeholder="Search releases in index..."
+                        value={searchFilter}
+                        onChange={e => setSearchFilter(e.target.value)}
+                        style={{ padding: '6px 10px', fontSize: 12 }}
+                      />
+                    </div>
+                    {searchFilter && (
+                      <button
+                        className="neo-btn neo-btn-subtle"
+                        style={{ padding: '4px 8px', fontSize: 11 }}
+                        onClick={() => setSearchFilter('')}
+                      >
+                        Clear Search
+                      </button>
+                    )}
+                  </div>
+
                   {/* Letter filter pills */}
                   <div className="index-letter-pills">
                     <button
@@ -482,6 +549,7 @@ export default function ReleasesIndexPage() {
                     ))}
                   </div>
 
+                  {/* BBCode Output View */}
                   {activeView === 'bbcode' ? (
                     <div className="form-field">
                       <textarea
@@ -489,50 +557,78 @@ export default function ReleasesIndexPage() {
                         rows={22}
                         readOnly
                         value={getDisplayedBBCode()}
-                        style={{ width: '100%', fontSize: 12, lineHeight: 1.5, background: 'var(--input-bg)' }}
+                        style={{
+                          width: '100%',
+                          fontSize: 12,
+                          lineHeight: 1.65,
+                          background: '#08080b',
+                          color: 'var(--text)'
+                        }}
                       />
                     </div>
                   ) : (
-                    /* Visual Preview */
+                    /* Interactive Visual Preview */
                     <div
                       style={{
                         background: 'var(--surface-2)',
-                        border: '1px solid var(--border)',
+                        border: '2px solid var(--border)',
                         borderRadius: 'var(--radius)',
                         padding: 20,
-                        maxHeight: 520,
+                        maxHeight: 560,
                         overflowY: 'auto'
                       }}
                     >
-                      {(activeSection === 'all' ? result.sectionKeys : [activeSection]).map(k => (
-                        <div key={k} style={{ marginBottom: 24 }}>
-                          <h3
-                            style={{
-                              fontFamily: 'var(--font-display)',
-                              fontSize: 16,
-                              color: 'var(--accent)',
-                              borderBottom: '1px solid var(--border)',
-                              paddingBottom: 4,
-                              marginBottom: 10
-                            }}
-                          >
-                            [ {k} ]
-                          </h3>
-                          <div>
-                            {(result.groups[k] || []).map(topic => (
-                              <div key={topic.id} className="index-preview-item">
-                                <a
-                                  href={`https://vhstaperepacks.com/viewtopic.php?t=${topic.id}`}
-                                  target="_blank"
-                                  rel="noreferrer"
-                                >
-                                  {topic.title}
-                                </a>
-                              </div>
-                            ))}
+                      {previewSections.map(k => {
+                        let list = result.groups[k] || [];
+                        if (searchFilter) {
+                          const q = searchFilter.toLowerCase();
+                          list = list.filter(t => t.title.toLowerCase().includes(q));
+                        }
+                        if (list.length === 0) return null;
+
+                        return (
+                          <div key={k} style={{ marginBottom: 26 }}>
+                            <div
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'space-between',
+                                borderBottom: '2px solid var(--border)',
+                                paddingBottom: 6,
+                                marginBottom: 10
+                              }}
+                            >
+                              <h3
+                                style={{
+                                  fontFamily: 'var(--font-display)',
+                                  fontSize: 15,
+                                  fontWeight: 800,
+                                  color: 'var(--accent)'
+                                }}
+                              >
+                                [ {k} ]
+                              </h3>
+                              <span style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
+                                {list.length} {list.length === 1 ? 'release' : 'releases'}
+                              </span>
+                            </div>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                              {list.map(topic => (
+                                <div key={topic.id} className="index-preview-item">
+                                  <span className="topic-id-badge">t={topic.id}</span>
+                                  <a
+                                    href={`https://vhstaperepacks.com/viewtopic.php?t=${topic.id}`}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                  >
+                                    {topic.title}
+                                  </a>
+                                </div>
+                              ))}
+                            </div>
                           </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   )}
                 </div>
