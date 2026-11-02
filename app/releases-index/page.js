@@ -268,18 +268,6 @@ export default function ReleasesIndexPage() {
           </div>
           <div>
             {user ? (
-              <span
-                className="source-tag"
-                style={{
-                  background: 'var(--success-soft)',
-                  color: 'var(--success)',
-                  border: '1px solid var(--success)',
-                  padding: '6px 12px',
-                  fontSize: 11
-                }}
-              >
-              </span>
-            ) : (
               <button className="neo-btn neo-btn-discord" onClick={handleDiscordLogin}>
                 <IconDiscord size={15} />
                 Login with Discord
