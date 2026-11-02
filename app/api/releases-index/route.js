@@ -48,7 +48,17 @@ export async function POST(request) {
 
     if (!authUser) {
       return NextResponse.json(
-        { error: 'Unauthorized: Releases Index generator is restricted to authenticated users only.' },
+        { error: 'Unauthorized: Releases Index crawler is strictly restricted to authenticated VHSTaPE members only.' },
+        { status: 401 }
+      );
+    }
+  } else {
+    // When Supabase environment variables are not configured in local environment,
+    // still require an authorization header so guest requests cannot crawl.
+    const authHeader = request.headers.get('authorization');
+    if (!authHeader) {
+      return NextResponse.json(
+        { error: 'Unauthorized: Releases Index crawler is strictly restricted to authenticated VHSTaPE members only.' },
         { status: 401 }
       );
     }
