@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { createClient } from '@supabase/supabase-js';
-import { IconGenerator, IconPreview, IconHelp, IconAccount } from './Icons';
+import { IconGenerator, IconPreview, IconHelp, IconAccount, IconIndex } from './Icons';
 
 export default function Header({ currentLang = 'en', onLangChange = null }) {
   const pathname = usePathname();
@@ -64,6 +64,13 @@ export default function Header({ currentLang = 'en', onLangChange = null }) {
           >
             <IconGenerator size={14} />
             GENERATOR
+          </Link>
+          <Link
+            href="/releases-index"
+            className={`nav-link ${pathname === '/releases-index' ? 'active' : ''}`}
+          >
+            <IconIndex size={14} />
+            INDEX
           </Link>
           <Link
             href="/preview"
