@@ -814,3 +814,212 @@ textarea {
   background: var(--input-bg);
   font-size: 12.5px;
 }
+
+/* =========================================================
+   Releases Index Generator Styles (Modern Dark + Orange)
+   ========================================================= */
+.auth-feature-grid {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  gap: 24px;
+  align-items: stretch;
+}
+
+@media (max-width: 900px) {
+  .auth-feature-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.auth-feature-box {
+  background: var(--surface-2);
+  border: 2px solid var(--border);
+  border-left: 4px solid var(--accent);
+  border-radius: var(--radius);
+  padding: 22px;
+  box-shadow: 2px 2px 0px #000;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.auth-feature-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--accent);
+  background: var(--accent-soft);
+  border: 1px solid var(--accent-border);
+  border-radius: 4px;
+  padding: 3px 8px;
+  margin-bottom: 12px;
+  width: fit-content;
+}
+
+.auth-feature-title {
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--text-white);
+  letter-spacing: -0.3px;
+  margin-bottom: 8px;
+}
+
+.auth-feature-desc {
+  font-size: 13px;
+  color: var(--text-dim);
+  line-height: 1.6;
+  margin-bottom: 18px;
+}
+
+.auth-bullets {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 22px;
+}
+
+.auth-bullet-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 12.5px;
+  color: var(--text);
+  line-height: 1.45;
+}
+
+.auth-bullet-tag {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  background: var(--surface-3);
+  color: var(--accent);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 2px 6px;
+  white-space: nowrap;
+}
+
+.spec-mockup-card {
+  background: #08080b;
+  border: 2px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  box-shadow: 2px 2px 0px #000;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.spec-mockup-header {
+  background: var(--surface-2);
+  border-bottom: 1px solid var(--border);
+  padding: 8px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.spec-mockup-dots {
+  display: flex;
+  gap: 5px;
+}
+
+.spec-mockup-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--border);
+}
+
+.spec-mockup-body {
+  padding: 14px;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  line-height: 1.65;
+  color: var(--text-dim);
+  overflow-y: auto;
+  max-height: 340px;
+  white-space: pre-wrap;
+}
+
+.spec-mockup-body .bb-header {
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.spec-mockup-body .bb-url {
+  color: #60a5fa;
+}
+
+.index-letter-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 16px;
+}
+
+.index-letter-pill {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  background: var(--surface-2);
+  color: var(--text-dim);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 4px 9px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  box-shadow: 1px 1px 0px #000;
+}
+
+.index-letter-pill:hover, .index-letter-pill.active {
+  background: var(--accent);
+  color: var(--text-white);
+  border-color: var(--accent);
+  box-shadow: 2px 2px 0px #000;
+}
+
+.index-preview-item {
+  padding: 6px 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  font-size: 12.5px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-radius: 4px;
+  transition: background 0.15s ease;
+}
+
+.index-preview-item:hover {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.index-preview-item a {
+  color: var(--text-white);
+  text-decoration: none;
+}
+
+.index-preview-item a:hover {
+  color: var(--accent);
+  text-decoration: underline;
+}
+
+.index-preview-item .topic-id-badge {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-muted);
+  background: var(--input-bg);
+  border: 1px solid var(--border);
+  padding: 1px 5px;
+  border-radius: 3px;
+}
+
+
