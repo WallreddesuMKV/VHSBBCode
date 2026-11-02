@@ -325,7 +325,7 @@ export default function ReleasesIndexPage() {
                     border: '1px solid var(--accent-border)'
                   }}
                 >
-                  FORUM: VHSTAPE REPACKS
+                  
                 </span>
               </div>
 
