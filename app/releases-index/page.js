@@ -267,7 +267,7 @@ export default function ReleasesIndexPage() {
             </div>
           </div>
           <div>
-            {user ? (
+            {!user && (
               <button className="neo-btn neo-btn-discord" onClick={handleDiscordLogin}>
                 <IconDiscord size={15} />
                 Login with Discord
@@ -311,7 +311,7 @@ export default function ReleasesIndexPage() {
                     border: '1px solid var(--accent-border)'
                   }}
                 >
-                  
+                  FORUM: VHSTAPE REPACKS
                 </span>
               </div>
 
