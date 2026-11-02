@@ -278,8 +278,6 @@ export default function ReleasesIndexPage() {
                   fontSize: 11
                 }}
               >
-                <IconCheck size={12} style={{ display: 'inline', marginRight: 5, verticalAlign: -1 }} />
-                AUTHORIZED MEMBER
               </span>
             ) : (
               <button className="neo-btn neo-btn-discord" onClick={handleDiscordLogin}>
