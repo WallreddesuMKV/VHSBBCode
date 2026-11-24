@@ -1,3 +1,7 @@
+export const INDEX_HEADER_BBCODE =
+  '[size=200]VHS TAPE Releases A-Z[/size]\r\n' +
+  '[b]Info: This Topic Will be Updated every once in a week, you can find all of our releases at this single topic.[/b]';
+
 export function decodeHtmlEntities(str) {
   if (!str) return '';
   return str
@@ -8,7 +12,7 @@ export function decodeHtmlEntities(str) {
     .replace(/&#39;/g, "'")
     .replace(/&#039;/g, "'")
     .replace(/&ndash;/g, '–')
-    .replace(/&mdash;/g, '—')
+    .replace(/&mdash;/g, '-')
     .replace(/&hellip;/g, '…');
 }
 
@@ -37,6 +41,14 @@ export function parseForumPagination(html) {
   const perPage = perPageMatch ? parseInt(perPageMatch[1], 10) : 25;
   const totalPages = totalTopics > 0 ? Math.ceil(totalTopics / perPage) : 1;
   return { totalTopics, perPage, totalPages };
+}
+
+export function formatSectionBBCode(key, topics) {
+  const header = `[b][size=150][ ${key} ][/size][/b]`;
+  const lines = topics.map(
+    t => `[url=https://vhstaperepacks.com/viewtopic.php?t=${t.id}]${t.title}[/url]`
+  );
+  return [header, ...lines].join('\r\n');
 }
 
 export function groupAndFormatTopics(topics, options = {}) {
@@ -68,7 +80,7 @@ export function groupAndFormatTopics(topics, options = {}) {
   });
 
   // ponytail: phpBB returns topics pre-sorted by subject via &sk=s&sd=a.
-  // We preserve that order to match forum collation unless options.sort is explicitly requested.
+  // Preserve that order unless options.sort is explicitly requested.
   if (options.sort) {
     for (const k of keys) {
       groups[k].sort((a, b) =>
@@ -77,30 +89,18 @@ export function groupAndFormatTopics(topics, options = {}) {
     }
   }
 
-  // Build BBCode
-  let bbcode = '';
-  if (options.includeHeader) {
-    bbcode += '[size=200]VHS TAPE Releases A-Z[/size]\r\n';
-    bbcode += '[b]Info: This Topic Will be Updated every once in a week, you can find all of our releases at this single topic.[/b]\r\n\r\n\r\n\r\n\r\n';
-  }
-
-  const sections = [];
+  // Build separate BBCode per category (#, A, B, C, ...)
+  const sectionBBCodes = {};
   for (const k of keys) {
-    let section = `[b][size=150][ ${k} ][/size][/b]\r\n`;
-    const lines = groups[k].map(
-      t => `[url=https://vhstaperepacks.com/viewtopic.php?t=${t.id}]${t.title}[/url]`
-    );
-    section += lines.join('\r\n');
-    sections.push(section);
+    sectionBBCodes[k] = formatSectionBBCode(k, groups[k]);
   }
-
-  bbcode += sections.join('\r\n\r\n');
 
   return {
-    bbcode,
+    headerBBCode: options.includeHeader ? INDEX_HEADER_BBCODE : '',
+    sectionBBCodes,
     groups,
     totalTopics: uniqueTopics.length,
-    sectionKeys: keys
+    sectionKeys: keys,
   };
 }
 
@@ -109,24 +109,26 @@ export async function fetchForumIndex({
   maxPages = null,
   startPage = 1,
   includeHeader = false,
-  concurrency = 6
+  concurrency = 6,
 } = {}) {
-  // Extract forum id f
   let f = 6;
   try {
     const parsed = new URL(forumUrl);
+    if (parsed.hostname !== 'vhstaperepacks.com' && !parsed.hostname.endsWith('.vhstaperepacks.com')) {
+      throw new Error('Only vhstaperepacks.com forum URLs are supported.');
+    }
     const paramF = parsed.searchParams.get('f');
-    if (paramF) f = parseInt(paramF, 10);
+    if (paramF && /^\d+$/.test(paramF)) f = parseInt(paramF, 10);
   } catch (e) {
-    // fallback to f=6
+    if (e.message?.includes('vhstaperepacks.com')) throw e;
   }
 
+  const safeStart = Math.max(1, parseInt(startPage, 10) || 1);
+  const safeMax = maxPages ? Math.max(1, Math.min(100, parseInt(maxPages, 10) || 1)) : null;
   const baseUrl = `https://vhstaperepacks.com/viewforum.php?f=${f}&sk=s&sd=a`;
+  const headers = { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' };
 
-  // Fetch page 1 to detect total topics and pagination
-  const p1Res = await fetch(baseUrl, {
-    headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' }
-  });
+  const p1Res = await fetch(baseUrl, { headers });
   if (!p1Res.ok) {
     throw new Error(`Failed to fetch forum: HTTP ${p1Res.status}`);
   }
@@ -135,40 +137,36 @@ export async function fetchForumIndex({
   const perPage = pagination.perPage || 25;
 
   const totalPagesInForum = pagination.totalPages || 1;
-  const targetEndPage = maxPages
-    ? Math.min(startPage + maxPages - 1, totalPagesInForum)
+  const targetEndPage = safeMax
+    ? Math.min(safeStart + safeMax - 1, totalPagesInForum)
     : totalPagesInForum;
 
-  // Prepare pages
   const pagesToFetch = [];
-  for (let p = startPage; p <= targetEndPage; p++) {
+  for (let p = safeStart; p <= targetEndPage; p++) {
     pagesToFetch.push({ pageNumber: p, start: (p - 1) * perPage });
   }
 
   const allPageResults = new Map();
-
-  if (startPage === 1 && pagesToFetch.length > 0 && pagesToFetch[0].pageNumber === 1) {
+  if (safeStart === 1 && pagesToFetch.length > 0 && pagesToFetch[0].pageNumber === 1) {
     allPageResults.set(1, parseForumTopics(p1Html));
   }
 
   const queue = pagesToFetch.filter(p => !allPageResults.has(p.pageNumber));
-
   let qIdx = 0;
+
   async function worker() {
     while (qIdx < queue.length) {
       const item = queue[qIdx++];
       const pageUrl = `${baseUrl}&start=${item.start}`;
       try {
-        const res = await fetch(pageUrl, {
-          headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' }
-        });
+        const res = await fetch(pageUrl, { headers });
         if (res.ok) {
           const html = await res.text();
           allPageResults.set(item.pageNumber, parseForumTopics(html));
         } else {
           allPageResults.set(item.pageNumber, []);
         }
-      } catch (e) {
+      } catch {
         allPageResults.set(item.pageNumber, []);
       }
     }
@@ -183,7 +181,7 @@ export async function fetchForumIndex({
   }
 
   const orderedTopics = [];
-  for (let p = startPage; p <= targetEndPage; p++) {
+  for (let p = safeStart; p <= targetEndPage; p++) {
     const list = allPageResults.get(p) || [];
     orderedTopics.push(...list);
   }
@@ -194,7 +192,7 @@ export async function fetchForumIndex({
     pagination: {
       totalForumTopics: pagination.totalTopics,
       totalPagesInForum,
-      fetchedPages: targetEndPage - startPage + 1
-    }
+      fetchedPages: Math.max(0, targetEndPage - safeStart + 1),
+    },
   };
 }

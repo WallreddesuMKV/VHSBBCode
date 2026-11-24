@@ -1,5 +1,5 @@
 /* =========================================================
-   BBCode Gen — Exact CORS Proxies & Parsers from script.js
+   BBCode Gen | Exact CORS Proxies & Parsers from script.js
    Matches script.js lines 153-870 verbatim without breaking changes
    ========================================================= */
 
@@ -15,7 +15,7 @@ const langMap = {
   'vietnamese': 'Vietnamese', 'indonesian': 'Indonesian'
 };
 
-/* ===== CORS Proxies — exact fallback chain from script.js lines 174-204 ===== */
+/* ===== CORS Proxies: exact fallback chain from script.js lines 174-204 ===== */
 export async function fetchViaProxy(targetUrl) {
   const appidMatch = targetUrl.match(/(?:appids?=|\/app\/)(\d+)/);
   const appid = appidMatch ? appidMatch[1] : null;
@@ -787,6 +787,170 @@ export async function fetchItchData(url, onProgress) {
     buildName: title,
     storeUrl: url,
     buildId: '',
+    includedContent: ''
+  };
+}
+
+/* ===== 5. Fetch IMDb movie data ===== */
+export function formatDuration(duration) {
+  if (!duration) return '';
+  const str = String(duration).trim();
+  const isoMatch = str.match(/PT(?:(\d+)H)?(?:(\d+)M)?/i);
+  if (isoMatch && (isoMatch[1] || isoMatch[2])) {
+    return [isoMatch[1] ? `${isoMatch[1]} h` : '', isoMatch[2] ? `${isoMatch[2]} m` : ''].filter(Boolean).join(' ');
+  }
+  const minMatch = str.match(/^(\d+)\s*(?:min|mins|m)?$/i);
+  if (minMatch) {
+    const totalMinutes = parseInt(minMatch[1], 10);
+    const hours = Math.floor(totalMinutes / 60);
+    const mins = totalMinutes % 60;
+    return [hours > 0 ? `${hours} h` : '', mins > 0 ? `${mins} m` : ''].filter(Boolean).join(' ');
+  }
+  return str;
+}
+
+export function resizeImdbImage(url, width = 455, height = 673) {
+  if (!url || typeof url !== 'string') return url || '';
+  if (url.includes('media-amazon.com/images/')) {
+    return url.replace(/(?:\._V1_.*)?\.(jpe?g|png|webp)$/i, `._V1_SX${width}_CR0,0,${width},${height}_.jpg`);
+  }
+  if (url.includes('images.metahub.space/poster/small/')) {
+    return url.replace('/poster/small/', '/poster/medium/');
+  }
+  return url;
+}
+
+export function formatMovieLanguages(langs) {
+  if (!langs) return '';
+  const list = Array.isArray(langs) ? langs : String(langs).split(',');
+  const unique = Array.from(new Set(
+    list
+      .map(l => String(l || '').trim())
+      .filter(l => l && !/^Q\d+$/.test(l))
+  ));
+  if (unique.length > 1) return 'MULTi' + unique.length;
+  return unique[0] || '';
+}
+
+export async function fetchImdbData(input, onProgress) {
+  if (!input) throw new Error('Please enter an IMDb URL or title ID.');
+
+  onProgress?.('Fetching from IMDb...', 'loading');
+  const trimmed = String(input).trim();
+  const idMatch = trimmed.match(/tt\d+/i) || trimmed.match(/\d+/);
+  if (!idMatch) throw new Error('Please enter a valid IMDb URL or title ID (for example, tt43739386).');
+
+  const rawId = idMatch[0].toLowerCase();
+  const imdbId = rawId.startsWith('tt') ? rawId : 'tt' + rawId;
+  const imdbUrl = 'https://www.imdb.com/title/' + imdbId + '/';
+  const isBrowser = typeof window !== 'undefined';
+
+  const fetchJson = async (url, { proxyOnlyInBrowser = false } = {}) => {
+    const urls = isBrowser
+      ? (proxyOnlyInBrowser
+        ? ['/api/fetch?url=' + encodeURIComponent(url)]
+        : [url, '/api/fetch?url=' + encodeURIComponent(url)])
+      : [url];
+
+    for (const target of urls) {
+      try {
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), 9000);
+        const headers = (!isBrowser && target.includes('wikidata.org'))
+          ? { Accept: 'application/sparql-results+json', 'User-Agent': 'BBCodeGen/1.0' }
+          : { Accept: 'application/json' };
+        const res = await fetch(target, { headers, signal: controller.signal });
+        clearTimeout(timer);
+        if (res.ok) return await res.json();
+      } catch (e) {}
+    }
+    return null;
+  };
+
+  const sparql = `SELECT DISTINCT ?langLabel WHERE { ?item wdt:P345 "${imdbId}" . { ?item wdt:P364 ?lang . } UNION { ?item wdt:P407 ?lang . } SERVICE wikibase:label { bd:serviceParam wikibase:language "en". } }`;
+  const wikidataUrl = 'https://query.wikidata.org/sparql?format=json&query=' + encodeURIComponent(sparql);
+
+  // Fetch Cinemeta (description/duration/genre/year), IMDb suggestion (official Amazon poster), and Wikidata (languages) in parallel
+  const [movieData, suggestionData, wikiData] = await Promise.all([
+    fetchJson(`https://v3-cinemeta.strem.io/meta/movie/${imdbId}.json`),
+    fetchJson(`https://v3.sg.media-imdb.com/suggestion/t/${imdbId}.json`, { proxyOnlyInBrowser: true }),
+    fetchJson(wikidataUrl),
+  ]);
+
+  let meta = movieData?.meta?.name ? movieData.meta : null;
+  if (!meta) {
+    const seriesData = await fetchJson(`https://v3-cinemeta.strem.io/meta/series/${imdbId}.json`);
+    if (seriesData?.meta?.name) meta = seriesData.meta;
+  }
+
+  const suggestion = suggestionData?.d?.find(item => item.id?.toLowerCase() === imdbId) || suggestionData?.d?.[0] || null;
+
+  // Fallback to IMDb HTML JSON-LD only if Cinemeta didn't return description or runtime
+  let jsonLdMovie = null;
+  if (!meta?.description || !meta?.runtime) {
+    try {
+      const html = await fetchViaProxy(imdbUrl);
+      const jsonLdMatches = html
+        ? [...html.matchAll(/<script[^>]+type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi)]
+        : [];
+      for (const match of jsonLdMatches) {
+        try {
+          const parsed = JSON.parse(match[1]);
+          const entries = Array.isArray(parsed) ? parsed : [parsed];
+          jsonLdMovie = entries.find(item =>
+            item && (item['@type'] === 'Movie' || item['@type'] === 'TVSeries' || item['@type']?.includes?.('Movie'))
+          );
+          if (jsonLdMovie) break;
+        } catch (e) {}
+      }
+    } catch (e) {}
+  }
+
+  const title = meta?.name || jsonLdMovie?.name || suggestion?.l || '';
+  if (!title) {
+    throw new Error('IMDb movie data was not found. Check the URL or ID and try again.');
+  }
+
+  const wikiLangs = wikiData?.results?.bindings?.map(b => b.langLabel?.value).filter(Boolean) || [];
+  let languages = formatMovieLanguages(wikiLangs);
+  if (!languages && jsonLdMovie?.inLanguage) {
+    languages = formatMovieLanguages(jsonLdMovie.inLanguage);
+  }
+  if (!languages && meta?.country) {
+    const englishCountries = ['United States', 'United Kingdom', 'Canada', 'Australia', 'New Zealand'];
+    if (englishCountries.some(c => String(meta.country).includes(c))) {
+      languages = 'English';
+    }
+  }
+
+  const rawImage = suggestion?.i?.imageUrl
+    || (Array.isArray(jsonLdMovie?.image) ? jsonLdMovie.image[0] : jsonLdMovie?.image)
+    || meta?.poster
+    || '';
+  const headerImg = resizeImdbImage(rawImage);
+  const description = String(meta?.description || jsonLdMovie?.description || '').replace(/\s+/g, ' ').trim();
+  const duration = formatDuration(meta?.runtime || jsonLdMovie?.duration || '');
+  const rawGenre = meta?.genres || meta?.genre || jsonLdMovie?.genre || (suggestion?.q === 'feature' || suggestion?.q === 'movie' ? 'Movie' : '');
+  const genre = Array.isArray(rawGenre) ? rawGenre.join(', ') : String(rawGenre || '');
+  const releaseDate = meta?.year
+    ? String(meta.year)
+    : (jsonLdMovie?.datePublished || (suggestion?.y ? String(suggestion.y) : ''));
+
+  return {
+    title,
+    headerImg,
+    quote: description,
+    genre,
+    duration,
+    imdbUrl,
+    releaseDate,
+    developer: '',
+    publisher: '',
+    languages,
+    buildName: title,
+    buildId: '',
+    version: '',
+    storeUrl: imdbUrl,
     includedContent: ''
   };
 }

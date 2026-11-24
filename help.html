@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BBCode Generator — Help & Usage Guide</title>
+  <link
+    href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700;800;900&display=swap"
+    rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <style>
+    /* Minimal help layout extensions reusing style.css */
+    .help-grid {
+      display: grid;
+      grid-template-columns: 1.15fr 1fr;
+      gap: 24px;
+      align-items: start;
+    }
+    @media(max-width: 960px) {
+      .help-grid { grid-template-columns: 1fr; }
+    }
+    .help-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .help-item {
+      display: flex;
+      gap: 12px;
+      font-size: 13px;
+      line-height: 1.55;
+    }
+    .help-num {
+      width: 22px;
+      height: 22px;
+      background: var(--surface-3);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--accent);
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+    .help-code-preview {
+      background: var(--input-bg);
+      border: 1px solid var(--input-border);
+      border-radius: var(--radius);
+      padding: 12px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11.5px;
+      color: var(--text);
+      line-height: 1.5;
+      overflow-x: auto;
+      white-space: pre;
+    }
+    .help-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+    }
+    .help-table th {
+      text-align: left;
+      padding: 8px 10px;
+      color: var(--text-muted);
+      border-bottom: 1px solid var(--border);
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+    .help-table td {
+      padding: 9px 10px;
+      border-bottom: 1px solid var(--border);
+      color: var(--text);
+    }
+    .help-table tr:last-child td {
+      border-bottom: none;
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- ===== Header (identical to index.html) ===== -->
+  <header class="header">
+    <div class="header-inner">
+      <div class="brand">
+        <a href="index.html" style="text-decoration:none; display:flex; align-items:center; gap:10px;">
+          <span class="brand-name"><span>BB</span>Code Gen</span>
+          <span class="brand-sub">VHSTaPE</span>
+        </a>
+      </div>
+      <div class="nav-items">
+        <a href="index.html" class="nav-item" style="text-decoration:none; display:inline-flex; align-items:center; gap:6px;">
+          <svg class="pixel-icon" viewBox="0 0 24 24" width="13" height="13" fill="none" shape-rendering="crispEdges">
+            <polyline points="15 18 9 12 15 6" stroke="#ff6b3d" stroke-width="2"/>
+          </svg>
+          GENERATOR
+        </a>
+        <a href="help.html" class="nav-item" style="text-decoration:none; color:#fff; background:rgba(255,255,255,0.06);">HELP</a>
+      </div>
+      <div class="lang-switch">
+        <button class="lang-btn active">EN</button>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <div class="help-grid">
+
+      <!-- ===== LEFT COLUMN ===== -->
+      <div class="left-col">
+
+        <!-- Card: How to Use -->
+        <div class="card">
+          <div class="card-header">
+            <svg class="pixel-icon" viewBox="0 0 24 24" width="15" height="15" fill="none" shape-rendering="crispEdges">
+              <path d="M4 2h11l5 5v15H4V2z" fill="#3a3a42" stroke="#1c1c20" stroke-width="1.5" stroke-linejoin="round"/>
+              <path d="M15 2v5h5" fill="#2a2a30" stroke="#1c1c20" stroke-width="1.5"/>
+              <line x1="7" y1="10" x2="17" y2="10" stroke="#ff6b3d" stroke-width="2"/>
+              <line x1="7" y1="14" x2="17" y2="14" stroke="#66c0f4" stroke-width="2"/>
+              <line x1="7" y1="18" x2="13" y2="18" stroke="#66c0f4" stroke-width="2"/>
+            </svg>
+            <h2>WORKFLOW</h2>
+            <span class="badge badge-auto">QUICK START</span>
+          </div>
+          <div class="card-body">
+            <ol class="help-list">
+              <li class="help-item">
+                <span class="help-num">1</span>
+                <div>
+                  <strong>Pick Source:</strong> Select Steam, GOG, Epic, or itch.io from the top tab.
+                </div>
+              </li>
+              <li class="help-item">
+                <span class="help-num">2</span>
+                <div>
+                  <strong>Fetch Metadata:</strong> Enter App ID or store URL and click <em>Fetch</em> (or press Enter). Title, banner, quote, dev/publisher, tags, and languages populate automatically.
+                </div>
+              </li>
+              <li class="help-item">
+                <span class="help-num">3</span>
+                <div>
+                  <strong>Check Included Content:</strong> DLCs auto-fetch in batches with no item limit. You can also type or paste extra items manually (one per line).
+                </div>
+              </li>
+              <li class="help-item">
+                <span class="help-num">4</span>
+                <div>
+                  <strong>Repack & Links:</strong> Fill in Source/Crack, sizes, RAM required, and add your download mirrors (+ Add Link).
+                </div>
+              </li>
+              <li class="help-item">
+                <span class="help-num">5</span>
+                <div>
+                  <strong>Preview & Copy:</strong> Click <em>Preview</em> to view the rendered forum thread, then click <em>Copy</em> to copy clean BBCode to clipboard.
+                </div>
+              </li>
+            </ol>
+          </div>
+        </div>
+
+        <!-- Card: Store Identifier Formats -->
+        <div class="card">
+          <div class="card-header">
+            <svg class="pixel-icon" viewBox="0 0 24 24" width="15" height="15" fill="none" shape-rendering="crispEdges">
+              <path d="M2 5h7l2 2h11v13H2V5z" fill="#2e2e36" stroke="#1c1c20" stroke-width="1.5" stroke-linejoin="round"/>
+              <rect x="2" y="9" width="20" height="11" fill="#3a3a44" stroke="#1c1c20" stroke-width="1.2"/>
+            </svg>
+            <h2>STORE INPUTS</h2>
+            <span class="badge badge-opt">SYNTAX</span>
+          </div>
+          <div class="card-body">
+            <div class="info-rows" style="margin-bottom: 12px;">
+              <div class="info-row">
+                <span class="info-label">Steam</span>
+                <span class="info-value mono">3500390 (Numeric App ID from URL)</span>
+              </div>
+              <div class="info-row">
+                <span class="info-label">GOG</span>
+                <span class="info-value mono">https://www.gog.com/en/game/dark_fall_lost_souls</span>
+              </div>
+              <div class="info-row">
+                <span class="info-label">Epic</span>
+                <span class="info-value mono">https://store.epicgames.com/p/goat-simulator-3 or slug</span>
+              </div>
+              <div class="info-row">
+                <span class="info-label">itch.io</span>
+                <span class="info-value mono">https://developer.itch.io/game-title</span>
+              </div>
+            </div>
+            <p class="hint">Steam queries SteamSpy for popular community tags first, then SteamDB/SteamCMD for manifest Build ID.</p>
+          </div>
+        </div>
+
+        <!-- Card: Repack Info & Notes -->
+        <div class="card">
+          <div class="card-header">
+            <svg class="pixel-icon" viewBox="0 0 24 24" width="15" height="15" fill="none" shape-rendering="crispEdges">
+              <circle cx="12" cy="12" r="8" stroke="#1c1c20" stroke-width="1.5" fill="#3a3a42"/>
+              <circle cx="12" cy="12" r="3" fill="#141419" stroke="#1c1c20" stroke-width="1.2"/>
+            </svg>
+            <h2>REPACK DETAILS & NOTE</h2>
+            <span class="badge badge-manual">MANUAL</span>
+          </div>
+          <div class="card-body">
+            <ul class="help-list">
+              <li class="help-item">
+                <span class="help-num">•</span>
+                <div>
+                  <strong>Based On:</strong> Formatted automatically as <code>(Build &lt;ID&gt; )</code> for Steam or <code>(Version &lt;Ver&gt; )</code> for GOG/Epic/itch.
+                </div>
+              </li>
+              <li class="help-item">
+                <span class="help-num">•</span>
+                <div>
+                  <strong>Included Content:</strong> Placed below the Store link. Uses <code>[size=105][size=95]...[/size][/size]</code>. If left empty, the entire section is omitted cleanly.
+                </div>
+              </li>
+              <li class="help-item">
+                <span class="help-num">•</span>
+                <div>
+                  <strong>Custom Note:</strong> Wrapped in forum <code>[note]...[/note]</code> tag with colored warning heading and link parameter support.
+                </div>
+              </li>
+            </ul>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- ===== RIGHT COLUMN ===== -->
+      <div class="right-col">
+
+        <!-- Card: Exact Template Structure -->
+        <div class="card">
+          <div class="card-header">
+            <svg class="pixel-icon" viewBox="0 0 24 24" width="15" height="15" fill="none" shape-rendering="crispEdges">
+              <rect x="3" y="3" width="18" height="18" rx="1" fill="#2a2a32" stroke="#1c1c20" stroke-width="1.5"/>
+              <rect x="3" y="3" width="18" height="4" fill="#181820" stroke="#1c1c20" stroke-width="1.2"/>
+            </svg>
+            <h2>TEMPLATE BREAKS</h2>
+            <span class="badge badge-opt">OUTPUT SPEC</span>
+          </div>
+          <div class="card-body">
+            <div class="help-code-preview">[center][size=175][b][color=#8040FF]Title[/color][/b][/size]
+
+[img]header.jpg[/img]
+[size=105][quote]Store description...[/quote][/size]
+
+[img]imgbox.png[/img]
+
+
+[size=145][b][color=#8040FF][u]✧ Game Info ✧[/u][/color][/b][/size]
+
+[size=105][b]Based On: [/b]Title (Build 12345 )
+[b]Release Date: [/b]DD Mon, YYYY
+[b]Genre: [/b]Action, RPG
+[b]Developer:[/b] Studio
+[b]Publisher:[/b] Publisher
+[b]Languages: [/b]MULTi4
+[b]Source/Crack: [/b]RUNE
+
+[size=145][b][color=#8040FF][u]✧ Repack Info ✧[/u][/color][/b][/size]
+
+[b]Repack Size: [/b]5 GB
+[b]Final Size: [/b]8 GB
+[b]RAM Required: [/b]4 GB during installation
+
+
+[b]Store: [/b][url=https://...]Store URL[/url]
+
+
+[size=145][b][color=#8040FF][u]✧ Included Content ✧[/u][/color][/b][/size]
+
+[size=105][size=95]DLC 1
+DLC 2[/size][/size]
+
+
+
+[color=#BF0000][b]100% Lossless & MD5 Perfect: all files are identical to originals after installation[/b][/color]
+
+[/size]
+
+
+[size=145][b][color=#8040FF]Download Links[/color][/b][/size]
+
+[size=105][url=https://...][color=#FFFFFF]Main Links (Filecrypt)[/color][/url][/size]
+[size=105][url=https://...][color=#FFFFFF]Mirror (Pearcrypt)[/color][/url][/size]
+
+
+[size=110][note][color=#BF0000][b]ACHTUNG!![/b][/color]
+Note warning text [url=https://...](note)[/url][/note][/size]
+
+
+[b][color=#8040FF]IF YOU LIKE THIS GAME PLEASE SUPPORT THE DEVELOPERS & BUY IT![/color][/b]
+[/center]</div>
+          </div>
+        </div>
+
+        <!-- Card: BBCode Tags Reference -->
+        <div class="card">
+          <div class="card-header">
+            <svg class="pixel-icon" viewBox="0 0 24 24" width="15" height="15" fill="none" shape-rendering="crispEdges">
+              <rect x="3" y="4" width="18" height="3" fill="#92929a" stroke="#1c1c20" stroke-width="1.3"/>
+              <path d="M5 7l1.5 14h11L19 7H5z" fill="#808088" stroke="#1c1c20" stroke-width="1.5"/>
+            </svg>
+            <h2>TAG REFERENCE</h2>
+            <span class="badge badge-auto">STANDARD</span>
+          </div>
+          <div class="card-body" style="padding: 0;">
+            <table class="help-table">
+              <thead>
+                <tr>
+                  <th>Tag</th>
+                  <th>Function</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td class="mono">[center]</td>
+                  <td>Centers whole post layout</td>
+                </tr>
+                <tr>
+                  <td class="mono">[size=175|145|105]</td>
+                  <td>Title (175), section header (145), body (105)</td>
+                </tr>
+                <tr>
+                  <td class="mono">[color=#8040FF]</td>
+                  <td>Violet purple branding color</td>
+                </tr>
+                <tr>
+                  <td class="mono">[color=#BF0000]</td>
+                  <td>Dark red warning / lossless badge color</td>
+                </tr>
+                <tr>
+                  <td class="mono">[quote]</td>
+                  <td>Framed game synopsis</td>
+                </tr>
+                <tr>
+                  <td class="mono">[note]</td>
+                  <td>CS.RIN / tracker alert box</td>
+                </tr>
+                <tr>
+                  <td class="mono">[url=...][color=#FFFFFF]</td>
+                  <td>White mirror link buttons</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+  </main>
+
+</body>
+
+</html>

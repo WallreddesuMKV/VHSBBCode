@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BBCode Generator</title>
+  <link
+    href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700;800;900&display=swap"
+    rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+  <!-- ===== Header (nav-style like reference) ===== -->
+  <header class="header">
+    <div class="header-inner">
+      <div class="brand">
+        <span class="brand-name"><span>BB</span>Code Gen</span>
+        <span class="brand-sub" data-i18n="brand_sub">VHSTaPE</span>
+      </div>
+      <div class="nav-items">
+        <button class="nav-item" id="navPreviewBtn" data-i18n="nav_preview">PREVIEW</button>
+        <a href="help.html" class="nav-item" id="navHelpLink" data-i18n="nav_help" style="text-decoration:none; display:inline-flex; align-items:center;">HELP</a>
+      </div>
+      <div class="lang-switch">
+        <button class="lang-btn active" data-lang="en" data-i18n="lang_en">EN</button>
+        <button class="lang-btn" data-lang="fr" data-i18n="lang_fr">FR</button>
+        <button class="lang-btn" data-lang="jp" data-i18n="lang_jp">JP</button>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <div class="grid">
+
+      <!-- ===== LEFT COLUMN — Form ===== -->
+      <div class="left-col">
+
+        <!-- Source Switcher Card -->
+        <div class="card">
+          <div class="source-tabs">
+            <button class="source-tab active" data-source="steam">
+              <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round"
+                  d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <span data-i18n="source_steam">STEAM</span>
+            </button>
+            <button class="source-tab" data-source="gog">
+              <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round"
+                  d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+              </svg>
+              <span data-i18n="source_gog">GOG</span>
+            </button>
+            <button class="source-tab" data-source="epic">
+              <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
+              </svg>
+              <span data-i18n="source_epic">EPIC</span>
+            </button>
+            <button class="source-tab" data-source="itch">
+              <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+              </svg>
+              <span data-i18n="source_itch">ITCH.IO</span>
+            </button>
+          </div>
+
+          <div class="card-body">
+            <!-- Steam Panel -->
+            <div class="source-panel active" data-source="steam">
+              <div class="fetch-row">
+                <input type="number" id="appid" placeholder="Steam App ID (e.g. 2657900)" class="mono">
+                <button class="btn btn-steam" id="steamFetchBtn"><span data-i18n="steam_fetch">Fetch</span></button>
+              </div>
+              <div class="status" id="steamFetchStatus"></div>
+              <p class="hint" data-i18n="steam_hint">Enter a Steam App ID and click Fetch to auto-fill game info.</p>
+            </div>
+
+            <!-- GOG Panel -->
+            <div class="source-panel" data-source="gog">
+              <div class="fetch-row">
+                <input type="text" id="gogUrl" placeholder="https://www.gog.com/en/game/name or ID" class="mono"
+                  style="font-size:12px">
+                <button class="btn btn-gog" id="gogFetchBtn"><span data-i18n="gog_fetch">Fetch</span></button>
+              </div>
+              <div class="status" id="gogFetchStatus"></div>
+              <p class="hint" data-i18n="gog_hint">Paste a GOG game URL or product ID and click Fetch.</p>
+            </div>
+
+            <!-- Epic Games Panel -->
+            <div class="source-panel" data-source="epic">
+              <div class="fetch-row">
+                <input type="text" id="epicUrl" placeholder="https://store.epicgames.com/en-US/p/name or slug"
+                  class="mono" style="font-size:12px">
+                <button class="btn btn-epic" id="epicFetchBtn"><span data-i18n="epic_fetch">Fetch</span></button>
+              </div>
+              <div class="status" id="epicFetchStatus"></div>
+              <p class="hint" data-i18n="epic_hint">Paste an Epic Games Store product URL or slug and click Fetch.</p>
+            </div>
+
+            <!-- itch.io Panel -->
+            <div class="source-panel" data-source="itch">
+              <div class="fetch-row">
+                <input type="text" id="itchUrl" placeholder="https://user.itch.io/game-name" class="mono"
+                  style="font-size:12px">
+                <button class="btn btn-itch" id="itchFetchBtn"><span data-i18n="itch_fetch">Fetch</span></button>
+              </div>
+              <div class="status" id="itchFetchStatus"></div>
+              <p class="hint" data-i18n="itch_hint">Paste an itch.io game page URL and click Fetch.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Game Info Card -->
+        <div class="card">
+          <div class="card-header">
+            <svg class="pixel-icon" viewBox="0 0 24 24" fill="none" shape-rendering="crispEdges">
+              <path d="M4 2h10l6 6v14H4V2z" fill="#dedee4" stroke="#1c1c20" stroke-width="1.5"
+                stroke-linejoin="round" />
+              <path d="M14 2v6h6" fill="#a2a2aa" stroke="#1c1c20" stroke-width="1.5" stroke-linejoin="round" />
+              <rect x="7" y="10.5" width="10" height="2" fill="#2563eb" />
+              <rect x="7" y="14" width="10" height="2" fill="#2563eb" />
+              <rect x="7" y="17.5" width="6.5" height="2" fill="#2563eb" />
+            </svg>
+            <h2 data-i18n="game_info">GAME INFO</h2>
+          </div>
+          <div class="card-body">
+            <div class="field"><label data-i18n="f_title">Title <span class="badge badge-auto"
+                  data-i18n="auto">Auto</span></label><input type="text" id="title"></div>
+            <div class="field"><label data-i18n="f_header">Header Image <span class="badge badge-auto"
+                  data-i18n="auto">Auto</span></label><input type="text" id="headerImg" class="mono"
+                style="font-size:12px"></div>
+            <div class="field"><label data-i18n="f_quote">Description <span class="badge badge-auto"
+                  data-i18n="auto">Auto</span></label><textarea id="quote" rows="3" style="font-size:12px"></textarea>
+            </div>
+            <div class="field"><label data-i18n="f_imgbox">Imgbox URL <span class="badge badge-manual"
+                  data-i18n="manual">Manual</span></label><input type="text" id="imgboxUrl"
+                placeholder="https://images2.imgbox.com/..." class="mono" style="font-size:12px"></div>
+
+            <div class="field-row">
+              <div class="field"><label data-i18n="f_release">Release Date <span class="badge badge-auto"
+                    data-i18n="auto">Auto</span></label><input type="text" id="releaseDate"></div>
+              <div class="field"><label data-i18n="f_lang">Languages <span class="badge badge-auto"
+                    data-i18n="auto">Auto</span></label><input type="text" id="languages"></div>
+            </div>
+            <div class="field"><label data-i18n="f_genre">Genre <span class="badge badge-auto"
+                  data-i18n="auto">Auto</span></label><input type="text" id="genre"></div>
+            <div class="field-row">
+              <div class="field"><label data-i18n="f_dev">Developer <span class="badge badge-auto"
+                    data-i18n="auto">Auto</span></label><input type="text" id="developer"></div>
+              <div class="field"><label data-i18n="f_pub">Publisher <span class="badge badge-auto"
+                    data-i18n="auto">Auto</span></label><input type="text" id="publisher"></div>
+            </div>
+
+            <div id="steamOnlyFields">
+              <div class="field-row">
+                <div class="field"><label data-i18n="f_build">Build ID <span class="badge badge-auto"
+                      data-i18n="auto">Auto</span></label><input type="text" id="buildId" class="mono"></div>
+                <div class="field"><label data-i18n="f_buildname">Based On <span class="badge badge-auto"
+                      data-i18n="auto">Auto</span></label><input type="text" id="buildName"></div>
+              </div>
+            </div>
+
+            <div id="itchOnlyFields" class="hidden">
+              <div class="field"><label data-i18n="f_version">Version <span class="badge badge-itch"
+                    data-i18n="auto">Auto</span></label><input type="text" id="version" class="mono"
+                  placeholder="Auto from itch.io (if available)"></div>
+            </div>
+
+            <div class="field">
+              <label data-i18n="f_included">Included Content <span class="badge badge-manual"
+                  data-i18n="auto_manual">Auto / Manual</span></label>
+              <textarea id="includedContent" rows="3" placeholder="- DLC 1&#10;- DLC 2" class="mono"
+                style="font-size:12px"></textarea>
+            </div>
+
+            <div class="field"><label data-i18n="f_store">Store URL <span class="badge badge-auto"
+                  data-i18n="auto">Auto</span></label><input type="text" id="storeUrl" class="mono"
+                style="font-size:12px"></div>
+            <div class="field"><label data-i18n="f_source">Source/Crack <span class="badge badge-manual"
+                  data-i18n="manual">Manual</span></label><input type="text" id="sourceCrack"
+                placeholder="e.g. Wallreddesu CSF/TENOKE"></div>
+          </div>
+        </div>
+
+        <!-- Repack Info -->
+        <div class="card">
+          <div class="card-header">
+            <svg class="pixel-icon" viewBox="0 0 24 24" fill="none" shape-rendering="crispEdges">
+              <path d="M2 5h7l2 2h11v2H2V5z" fill="#787880" />
+              <path d="M2 5h7l2 2h11v2" stroke="#1c1c20" stroke-width="1.5" />
+              <rect x="2" y="7" width="20" height="13" fill="#888890" stroke="#1c1c20" stroke-width="1.5" />
+              <rect x="2" y="9" width="20" height="11" fill="#9e9ea6" stroke="#1c1c20" stroke-width="1.5" />
+              <line x1="3" y1="10.5" x2="21" y2="10.5" stroke="#c8c8d0" stroke-width="1" />
+            </svg>
+            <h2 data-i18n="repack_info">REPACK INFO</h2>
+            <span class="badge badge-manual" data-i18n="manual">Manual</span>
+          </div>
+          <div class="card-body">
+            <div class="field-row">
+              <div class="field"><label data-i18n="f_repack">Repack Size</label><input type="text" id="repackSize"
+                  placeholder="e.g. 518 MB"></div>
+              <div class="field"><label data-i18n="f_final">Final Size</label><input type="text" id="finalSize"
+                  placeholder="e.g. 718 MB"></div>
+            </div>
+            <div class="field"><label data-i18n="f_ram">RAM Required</label><input type="text" id="ramRequired"
+                placeholder="e.g. 4 GB during installation"></div>
+          </div>
+        </div>
+
+        <!-- Download Links -->
+        <div class="card">
+          <div class="card-header">
+            <svg class="pixel-icon" viewBox="0 0 24 24" fill="none" shape-rendering="crispEdges">
+              <path d="M2 5h7l2 2h11v2H2V5z" fill="#787880" />
+              <path d="M2 5h7l2 2h11v2" stroke="#1c1c20" stroke-width="1.5" />
+              <rect x="2" y="7" width="20" height="13" fill="#888890" stroke="#1c1c20" stroke-width="1.5" />
+              <rect x="2" y="9" width="20" height="11" fill="#9e9ea6" stroke="#1c1c20" stroke-width="1.5" />
+              <line x1="3" y1="10.5" x2="21" y2="10.5" stroke="#c8c8d0" stroke-width="1" />
+            </svg>
+            <h2 data-i18n="download_links">DOWNLOAD LINKS</h2>
+            <span class="badge badge-manual" data-i18n="manual">Manual</span>
+          </div>
+          <div class="card-body">
+            <p class="hint" style="margin-top:0;margin-bottom:12px" data-i18n="links_hint">Add download links manually.
+            </p>
+            <div id="linksContainer"></div>
+            <button class="add-link-btn" id="addLinkBtn">
+              <svg class="pixel-icon" viewBox="0 0 24 24" width="12" height="12" fill="none"
+                shape-rendering="crispEdges">
+                <rect x="10.5" y="3" width="3" height="18" fill="#ff6b3d" />
+                <rect x="3" y="10.5" width="18" height="3" fill="#ff6b3d" />
+              </svg>
+              <span data-i18n="add_link">Add Link</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Custom Note -->
+        <div class="card">
+          <div class="card-header">
+            <svg class="pixel-icon" viewBox="0 0 24 24" fill="none" shape-rendering="crispEdges">
+              <path d="M4 2h10l6 6v14H4V2z" fill="#dedee4" stroke="#1c1c20" stroke-width="1.5"
+                stroke-linejoin="round" />
+              <path d="M14 2v6h6" fill="#a2a2aa" stroke="#1c1c20" stroke-width="1.5" stroke-linejoin="round" />
+              <rect x="7" y="10.5" width="10" height="2" fill="#2563eb" />
+              <rect x="7" y="14" width="10" height="2" fill="#2563eb" />
+              <rect x="7" y="17.5" width="6.5" height="2" fill="#2563eb" />
+            </svg>
+            <h2 data-i18n="custom_note">CUSTOM NOTE</h2>
+            <span class="badge badge-opt" data-i18n="manual_opt">Manual · Optional</span>
+          </div>
+          <div class="card-body">
+            <div class="field"><label data-i18n="note_text_label">Note content (BBCode supported)</label><textarea
+                id="noteText" rows="3"
+                placeholder="[color=#BF0000][b]ACHTUNG!![/b][/color]&#10;Check the repack size..." class="mono"
+                style="font-size:12px"></textarea></div>
+            <div class="field"><label data-i18n="note_link_url">Note link URL</label><input type="text" id="noteLinkUrl"
+                placeholder="https://www.reddit.com/r/..." class="mono" style="font-size:12px"></div>
+            <label class="checkbox-row">
+              <input type="checkbox" id="noteEnabled" checked>
+              <span data-i18n="include_note">Include note in output</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="actions">
+          <button class="download-btn" id="generateBtn">
+            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+              <path stroke-linecap="round" stroke-linejoin="round"
+                d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+            </svg>
+            <span data-i18n="generate_btn">Generate BBCode</span>
+          </button>
+          <button class="btn btn-ghost" id="clearBtn"><span data-i18n="clear_btn">Clear</span></button>
+          <button class="btn btn-ghost" id="loadExampleBtn"><span data-i18n="example_btn">Load Example</span></button>
+        </div>
+      </div>
+
+      <!-- ===== RIGHT COLUMN — Preview + Output ===== -->
+      <div class="right-col">
+
+        <!-- Preview Panel (GameBounty-style info card) -->
+        <div class="card">
+          <div class="preview-hero">
+            <div class="preview-hero-title" id="previewTitle">Game Title</div>
+            <div class="preview-hero-sub" id="previewGenre">Genre</div>
+          </div>
+          <div class="info-rows">
+            <div class="info-row">
+              <span class="info-label" data-i18n="p_version">VERSION</span>
+              <span class="info-value accent" id="previewVersion">-</span>
+            </div>
+            <div class="info-row">
+              <span class="info-label" data-i18n="p_credits">CREDITS</span>
+              <span class="info-value" id="previewCredits">-</span>
+            </div>
+            <div class="info-row">
+              <span class="info-label" data-i18n="p_release">RELEASE</span>
+              <span class="info-value" id="previewReleaseDate">-</span>
+            </div>
+            <div class="info-row">
+              <span class="info-label" data-i18n="f_lang">Languages</span>
+              <span class="info-value" id="previewLanguages">-</span>
+            </div>
+            <div class="info-row" id="previewIncludedRow" style="display:none">
+              <span class="info-label" data-i18n="f_included">INCLUDED</span>
+              <span class="info-value" id="previewIncluded">-</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Game Details Card -->
+        <div class="card">
+          <div class="card-header">
+            <svg class="pixel-icon" viewBox="0 0 24 24" fill="none" shape-rendering="crispEdges">
+              <rect x="10" y="2" width="4" height="3" fill="#82828a" stroke="#1c1c20" stroke-width="1.2" />
+              <rect x="10" y="19" width="4" height="3" fill="#82828a" stroke="#1c1c20" stroke-width="1.2" />
+              <rect x="2" y="10" width="3" height="4" fill="#82828a" stroke="#1c1c20" stroke-width="1.2" />
+              <rect x="19" y="10" width="3" height="4" fill="#82828a" stroke="#1c1c20" stroke-width="1.2" />
+              <rect x="4" y="4" width="3.5" height="3.5" fill="#82828a" stroke="#1c1c20" stroke-width="1.2" />
+              <rect x="16.5" y="4" width="3.5" height="3.5" fill="#82828a" stroke="#1c1c20" stroke-width="1.2" />
+              <rect x="4" y="16.5" width="3.5" height="3.5" fill="#82828a" stroke="#1c1c20" stroke-width="1.2" />
+              <rect x="16.5" y="16.5" width="3.5" height="3.5" fill="#82828a" stroke="#1c1c20" stroke-width="1.2" />
+              <circle cx="12" cy="12" r="7.5" fill="#92929a" stroke="#1c1c20" stroke-width="1.5" />
+              <circle cx="12" cy="12" r="5.8" fill="none" stroke="#bebec8" stroke-width="0.8" />
+              <circle cx="12" cy="12" r="2.8" fill="#1c1c20" />
+            </svg>
+            <h2 data-i18n="p_game">GAME</h2>
+            <a class="info-value accent" id="previewStoreLink" href="#" target="_blank" rel="noopener"
+              style="font-size:12px;text-decoration:none">-</a>
+          </div>
+          <div class="info-rows">
+            <div class="info-row">
+              <span class="info-label" data-i18n="f_dev">Developer</span>
+              <span class="info-value" id="previewDev">-</span>
+            </div>
+            <div class="info-row">
+              <span class="info-label" data-i18n="f_pub">Publisher</span>
+              <span class="info-value" id="previewPub">-</span>
+            </div>
+            <div class="info-row">
+              <span class="info-label">SIZE</span>
+              <span class="info-value" id="previewSize">-</span>
+            </div>
+            <div class="info-row">
+              <span class="info-label">SOURCE</span>
+              <span class="info-value" id="previewSource">Steam</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Output Card -->
+        <div class="card output-card">
+          <div class="card-header">
+            <div class="title-left">
+              <svg class="pixel-icon" viewBox="0 0 24 24" fill="none" shape-rendering="crispEdges">
+                <rect x="2" y="3" width="20" height="18" fill="#92929a" stroke="#1c1c20" stroke-width="1.5" />
+                <rect x="2" y="3" width="20" height="5.5" fill="#44444c" />
+                <line x1="2" y1="8.5" x2="22" y2="8.5" stroke="#1c1c20" stroke-width="1" />
+                <rect x="18" y="4.5" width="2" height="2" fill="#dedee4" />
+                <rect x="5" y="11" width="3" height="6" fill="#1c1c20" />
+                <rect x="5" y="11" width="5" height="1.8" fill="#1c1c20" />
+                <rect x="5" y="13.5" width="4" height="1.5" fill="#1c1c20" />
+                <rect x="11" y="12" width="7" height="1.8" fill="#1c1c20" />
+                <rect x="11" y="15" width="5" height="1.8" fill="#1c1c20" />
+              </svg>
+              <h2 data-i18n="output">BBCODE OUTPUT</h2>
+            </div>
+            <div class="output-header-actions">
+              <button class="preview-card-btn" id="previewModalBtn" title="Preview forum BBCode post">
+                <svg class="pixel-icon" viewBox="0 0 24 24" width="13" height="13" fill="none"
+                  shape-rendering="crispEdges">
+                  <rect x="2" y="3" width="20" height="18" fill="#888892" stroke="#1c1c20" stroke-width="1.5" />
+                  <rect x="2" y="3" width="20" height="5" fill="#3c3c44" />
+                  <circle cx="12" cy="13.5" r="4" fill="#dedee4" stroke="#1c1c20" stroke-width="1.2" />
+                  <circle cx="12" cy="13.5" r="2" fill="#2563eb" />
+                </svg>
+                <span data-i18n="preview_btn">Preview</span>
+              </button>
+              <button class="copy-btn" id="copyBtn">
+                <svg class="pixel-icon" viewBox="0 0 24 24" width="13" height="13" fill="none"
+                  shape-rendering="crispEdges">
+                  <rect x="7" y="3" width="13" height="15" fill="#7a7a82" stroke="#1c1c20" stroke-width="1.3" />
+                  <path d="M4 7h10l3 3v11H4V7z" fill="#dedee4" stroke="#1c1c20" stroke-width="1.3" />
+                  <rect x="6" y="12" width="6" height="1.5" fill="#2563eb" />
+                  <rect x="6" y="15" width="8" height="1.5" fill="#2563eb" />
+                  <rect x="6" y="18" width="5" height="1.5" fill="#2563eb" />
+                </svg>
+                <span data-i18n="copy_btn">Copy</span>
+              </button>
+            </div>
+          </div>
+          <div class="card-body" style="padding-top:4px">
+            <textarea class="output-area" id="output" readonly></textarea>
+            <div class="output-hint">
+              <svg class="pixel-icon" viewBox="0 0 24 24" width="12" height="12" fill="none"
+                shape-rendering="crispEdges">
+                <circle cx="12" cy="12" r="9" stroke="#5a5a64" stroke-width="1.5" />
+                <rect x="11.25" y="7" width="1.5" height="2" fill="#8a8a94" />
+                <rect x="11.25" y="10.5" width="1.5" height="6.5" fill="#8a8a94" />
+              </svg>
+              <span data-i18n="output_hint">Output updates live. Click Copy to use in your forum post.</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <!-- ===== BBCode Forum Preview Modal ===== -->
+  <div class="modal-overlay" id="previewModal" style="display:none">
+    <div class="modal-window">
+      <div class="modal-header">
+        <div class="modal-title">
+          <svg class="pixel-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" shape-rendering="crispEdges">
+            <rect x="2" y="3" width="20" height="18" fill="#92929a" stroke="#1c1c20" stroke-width="1.5" />
+            <rect x="2" y="3" width="20" height="5.5" fill="#44444c" />
+            <line x1="2" y1="8.5" x2="22" y2="8.5" stroke="#1c1c20" stroke-width="1" />
+            <rect x="18" y="4.5" width="2" height="2" fill="#dedee4" />
+            <rect x="5" y="11" width="3" height="6" fill="#1c1c20" />
+            <rect x="5" y="11" width="5" height="1.8" fill="#1c1c20" />
+            <rect x="5" y="13.5" width="4" height="1.5" fill="#1c1c20" />
+            <rect x="11" y="12" width="7" height="1.8" fill="#1c1c20" />
+            <rect x="11" y="15" width="5" height="1.8" fill="#1c1c20" />
+          </svg>
+          <span>BBCode Forum Post Preview</span>
+        </div>
+        <div class="modal-controls">
+          <button class="modal-close-btn" id="previewModalCloseBtn" title="Close (Esc)">✕</button>
+        </div>
+      </div>
+      <div class="modal-subbar">
+        <div class="forum-subbar-text">Simulated Post · cs.rin.ru / phpBB Theme</div>
+        <div class="modal-subbar-actions">
+          <button class="btn-copy-modal" id="modalCopyBtn">Copy BBCode</button>
+        </div>
+      </div>
+      <div class="modal-body">
+        <div class="forum-post-container">
+          <div class="forum-post-header">
+            <div class="forum-author">
+              <div class="forum-avatar">VH</div>
+              <div class="forum-author-info">
+                <div class="forum-author-name">VHSTaPE</div>
+                <div class="forum-author-role">Repacker</div>
+              </div>
+            </div>
+            <div class="forum-meta">
+              <span class="forum-time" id="forumPostTime">Today, 14:40</span>
+              <span class="forum-post-id">#1</span>
+            </div>
+          </div>
+          <div class="forum-content" id="forumRenderedContent">
+            <!-- Rendered BBCode goes here -->
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+
+</html>

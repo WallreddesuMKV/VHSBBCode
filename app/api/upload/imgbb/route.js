@@ -1,7 +1,11 @@
 import { NextResponse } from 'next/server';
+import { requireVerifiedUser } from '../../../utils/requireAuth';
 
 export async function POST(request) {
   try {
+    const { response: authError } = await requireVerifiedUser();
+    if (authError) return authError;
+
     const formData = await request.formData();
     const file = formData.get('file') || formData.get('image');
     let apiKey = formData.get('apiKey') || formData.get('key') || request.headers.get('x-api-key') || process.env.IMGBB_API_KEY;
