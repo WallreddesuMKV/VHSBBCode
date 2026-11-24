@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import Header from '../components/Header';
 import { createBrowserSupabase } from '../utils/supabaseClient';
-import { DISCORD_OAUTH_SCOPES } from '../utils/discordAuth';
+import { DISCORD_OAUTH_SCOPES, isVerifiedUser } from '../utils/discordAuth';
 import {
   IconAccount,
   IconDiscord,
@@ -85,7 +85,8 @@ export default function AccountPage() {
                 authUser.user_metadata?.user_name ||
                 authUser.email || 'Discord User',
       avatar: authUser.user_metadata?.avatar_url || '',
-      discord_id: authUser.user_metadata?.provider_id || authUser.id
+      discord_id: authUser.user_metadata?.provider_id || authUser.id,
+      verified: isVerifiedUser(authUser)
     };
     setUser(userData);
 
@@ -354,7 +355,15 @@ export default function AccountPage() {
               )}
             </div>
             <div className="profile-info">
-              <h2>{user ? user.username : t.guest_session}</h2>
+              <div className="profile-name-row">
+                <h2>{user ? user.username : t.guest_session}</h2>
+                {user?.verified && (
+                  <span className="verified-badge">
+                    <IconCheck size={12} />
+                    {t.verified_repacker}
+                  </span>
+                )}
+              </div>
               {!user && <p>{t.guest_desc}</p>}
             </div>
           </div>

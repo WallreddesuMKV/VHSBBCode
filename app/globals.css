@@ -1164,10 +1164,32 @@ textarea {
   object-fit: cover;
 }
 
+.profile-name-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
 .profile-info h2 {
   font-size: 16px;
   font-weight: 700;
   color: var(--text-white);
+}
+
+.verified-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: var(--success-soft);
+  border: 1px solid var(--success-border);
+  color: var(--success);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.4;
 }
 
 .profile-info p {

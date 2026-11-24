@@ -181,6 +181,7 @@ export const i18n = {
     },
     account: {
       guest_session: 'Guest Session',
+      verified_repacker: 'Verified Repacker',
       guest_desc: 'Login with Discord to sync saved BBCodes & personal API keys across your devices.',
       logout: 'Log Out',
       login_discord: 'Login with Discord',
@@ -456,6 +457,7 @@ export const i18n = {
     },
     account: {
       guest_session: 'Session Invité',
+      verified_repacker: 'Repacker Vérifié',
       guest_desc: 'Connectez-vous avec Discord pour synchroniser vos BBCodes et clés API sur tous vos appareils.',
       logout: 'Déconnexion',
       login_discord: 'Connexion avec Discord',
@@ -731,6 +733,7 @@ export const i18n = {
     },
     account: {
       guest_session: 'ゲストセッション',
+      verified_repacker: '認証済み Repacker',
       guest_desc: 'Discordでログインすると、保存したBBCodeと個人APIキーをデバイス間で同期できます。',
       logout: 'ログアウト',
       login_discord: 'Discordでログイン',
