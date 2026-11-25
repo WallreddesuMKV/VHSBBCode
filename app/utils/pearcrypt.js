@@ -1,5 +1,6 @@
 export const PEARCRYPT_SITE_URL = 'https://pearcrypt.lol';
 export const PEARCRYPT_API_BASE = 'https://pearcrypt.lol/api/v1';
+export const PEARCRYPT_DASHBOARD_API_BASE = 'https://pearcrypt.lol/api';
 export const PEARCRYPT_READ_TIMEOUT_MS = 25000;
 export const PEARCRYPT_WRITE_TIMEOUT_MS = process.env.VERCEL ? 55000 : 95000;
 
@@ -70,6 +71,70 @@ export function buildCreateContainerPayload({ title, description = '', isProtect
   const cleanDesc = String(description || '').trim();
   if (cleanDesc) payload.description = cleanDesc;
   if (isProtected) payload.password = cleanPassword;
+
+  return payload;
+}
+
+function isHttpsUrl(raw) {
+  try {
+    return new URL(raw).protocol === 'https:';
+  } catch {
+    return false;
+  }
+}
+
+export function buildUpdateContainerPayload({ title, description = '', isProtected = false, password = '', mirrors }) {
+  const cleanTitle = String(title || '').trim();
+  if (!cleanTitle) {
+    throw new Error('Title cannot be empty.');
+  }
+
+  const cleanPassword = String(password || '').trim();
+  if (isProtected && cleanPassword && cleanPassword.length < 8) {
+    throw new Error('Password must be at least 8 characters.');
+  }
+
+  const payload = {
+    title: cleanTitle,
+    description: String(description || '').trim(),
+    isProtected: Boolean(isProtected),
+  };
+  if (isProtected && cleanPassword) {
+    payload.password = cleanPassword;
+  }
+
+  if (Array.isArray(mirrors)) {
+    const normalizedMirrors = [];
+    for (let i = 0; i < mirrors.length; i++) {
+      const mirror = mirrors[i];
+      const mirrorLabel = String(mirror?.name || '').trim() || `Mirror ${i + 1}`;
+      const rawLines = Array.isArray(mirror?.links)
+        ? mirror.links.map(l => (typeof l === 'string' ? l : l?.url || ''))
+        : String(mirror?.links || '').split(/\r?\n/);
+
+      const cleanUrls = [];
+      for (const rawLine of rawLines) {
+        const url = String(rawLine || '').trim();
+        if (!url) continue;
+        if (!isHttpsUrl(url)) {
+          throw new Error(`Invalid URL in mirror "${mirrorLabel}": ${url}. Only https:// URLs are allowed.`);
+        }
+        cleanUrls.push(url);
+      }
+
+      if (cleanUrls.length > 0) {
+        normalizedMirrors.push({
+          name: String(mirror?.name || '').trim() || `Mirror ${normalizedMirrors.length + 1}`,
+          links: cleanUrls.join('\n'),
+        });
+      }
+    }
+
+    if (normalizedMirrors.length === 0) {
+      throw new Error('Add at least one mirror with a valid https:// URL.');
+    }
+    payload.mirrors = normalizedMirrors;
+  }
 
   return payload;
 }

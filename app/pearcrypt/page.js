@@ -17,6 +17,7 @@ import {
 } from '../components/Icons';
 import {
   buildCreateContainerPayload,
+  buildUpdateContainerPayload,
   getContainerShareUrl,
   parseBulkUrls,
 } from '../utils/pearcrypt';
@@ -55,10 +56,13 @@ export default function PearcryptPage() {
   const [expandedId, setExpandedId] = useState(null);
   const [copiedKey, setCopiedKey] = useState(null);
 
-  // Edit modal
+  // Edit modal & filename recheck
   const [editing, setEditing] = useState(null);
   const [editSaving, setEditSaving] = useState(false);
   const [editStatus, setEditStatus] = useState({ text: '', type: '' });
+  const [recheckingId, setRecheckingId] = useState(null);
+  const [recheckCooldowns, setRecheckCooldowns] = useState({});
+  const [cooldownNow, setCooldownNow] = useState(Date.now());
 
   // Load Pearcrypt API key from localStorage & Supabase session
   useEffect(() => {
@@ -131,7 +135,7 @@ export default function PearcryptPage() {
 
   const fetchContainers = useCallback(async (keyOverride) => {
     const activeKey = (keyOverride ?? apiKey).trim();
-    if (!activeKey) return;
+    if (!activeKey) return [];
     setLoadingList(true);
     setListStatus({ text: '', type: '' });
     try {
@@ -142,9 +146,12 @@ export default function PearcryptPage() {
       if (!res.ok) {
         throw new Error(json?.error || `Failed to load containers (${res.status})`);
       }
-      setContainers(Array.isArray(json?.data) ? json.data : []);
+      const list = Array.isArray(json?.data) ? json.data : [];
+      setContainers(list);
+      return list;
     } catch (err) {
       setListStatus({ text: err.message || 'Failed to load containers.', type: 'error' });
+      return [];
     } finally {
       setLoadingList(false);
     }
@@ -291,36 +298,178 @@ export default function PearcryptPage() {
     }
   }
 
-  // --- Update Container (PUT /api/pearcrypt?id=...) ---
+  useEffect(() => {
+    const ids = Object.keys(recheckCooldowns);
+    if (ids.length === 0) return;
+    const iv = setInterval(() => {
+      const now = Date.now();
+      setCooldownNow(now);
+      setRecheckCooldowns(prev => {
+        let changed = false;
+        const next = {};
+        for (const [k, ts] of Object.entries(prev)) {
+          if (now - ts < 60000) next[k] = ts;
+          else changed = true;
+        }
+        return changed ? next : prev;
+      });
+    }, 1000);
+    return () => clearInterval(iv);
+  }, [recheckCooldowns]);
+
+  function getRecheckCooldownSeconds(containerId) {
+    const started = recheckCooldowns[containerId];
+    if (!started) return 0;
+    return Math.max(0, 60 - Math.floor((cooldownNow - started) / 1000));
+  }
+
+  function makeEditMirror(m, idx) {
+    const resolvedLinks = Array.isArray(m?.links) ? m.links : [];
+    return {
+      id: m?.id || Date.now() + Math.random() + idx,
+      name: m?.name || `Mirror ${idx + 1}`,
+      linksText: resolvedLinks.map(l => l.url).filter(Boolean).join('\n'),
+      resolvedLinks,
+      manuallyNamed: Boolean(m?.name),
+    };
+  }
+
+  // --- Update Container & Recheck Filenames (PUT / PATCH /api/pearcrypt?id=...) ---
   function openEditModal(container) {
     setEditStatus({ text: '', type: '' });
+    const sourceMirrors = Array.isArray(container.mirrors) && container.mirrors.length > 0
+      ? container.mirrors.map((m, idx) => makeEditMirror(m, idx))
+      : [{ id: Date.now(), name: 'Mirror 1', linksText: '', resolvedLinks: [], manuallyNamed: false }];
     setEditing({
       id: container.id,
       title: container.title || '',
       description: container.description || '',
       isProtected: Boolean(container.is_protected),
       password: '',
+      mirrors: sourceMirrors,
     });
+  }
+
+  function updateEditMirrorName(idx, value) {
+    setEditing(prev => prev && ({
+      ...prev,
+      mirrors: prev.mirrors.map((m, i) => (i === idx ? { ...m, name: value, manuallyNamed: true } : m)),
+    }));
+  }
+
+  function updateEditMirrorLinks(idx, value) {
+    setEditing(prev => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        mirrors: prev.mirrors.map((m, i) => {
+          if (i !== idx) return m;
+          let nextName = m.name;
+          if (!m.manuallyNamed) {
+            const firstLine = value.split(/\r?\n/).map(s => s.trim()).find(Boolean);
+            if (firstLine) {
+              try {
+                nextName = new URL(firstLine).hostname.replace(/^www\./, '') || `Mirror ${idx + 1}`;
+              } catch {
+                nextName = `Mirror ${idx + 1}`;
+              }
+            } else {
+              nextName = `Mirror ${idx + 1}`;
+            }
+          }
+          return { ...m, name: nextName, linksText: value };
+        }),
+      };
+    });
+  }
+
+  function addEditMirror() {
+    setEditing(prev => prev && ({
+      ...prev,
+      mirrors: [
+        ...prev.mirrors,
+        { id: Date.now() + Math.random(), name: `Mirror ${prev.mirrors.length + 1}`, linksText: '', resolvedLinks: [], manuallyNamed: false },
+      ],
+    }));
+  }
+
+  function removeEditMirror(idx) {
+    setEditing(prev => {
+      if (!prev || prev.mirrors.length <= 1) return prev;
+      return { ...prev, mirrors: prev.mirrors.filter((_, i) => i !== idx) };
+    });
+  }
+
+  async function handleRecheckFilenames(containerId) {
+    if (!containerId || !apiKey || recheckingId || getRecheckCooldownSeconds(containerId) > 0) return;
+    setRecheckingId(containerId);
+    if (editing?.id === containerId) setEditStatus({ text: t.rechecking, type: 'loading' });
+
+    try {
+      const res = await fetch(`/api/pearcrypt?id=${encodeURIComponent(containerId)}`, {
+        method: 'PATCH',
+        headers: { 'x-api-key': apiKey },
+      });
+      const json = await res.json().catch(() => null);
+      if (!res.ok) {
+        throw new Error(json?.error || `Filename recheck failed (${res.status})`);
+      }
+
+      const now = Date.now();
+      setCooldownNow(now);
+      setRecheckCooldowns(prev => ({ ...prev, [containerId]: now }));
+
+      const updatedCount = Number(json?.updated || 0);
+      const latestList = await fetchContainers();
+      const refreshed = latestList.find(c => c.id === containerId);
+      if (refreshed) {
+        setEditing(prev => {
+          if (!prev || prev.id !== containerId) return prev;
+          return {
+            ...prev,
+            mirrors: prev.mirrors.map((m, idx) => {
+              const match = (refreshed.mirrors || [])[idx];
+              return match ? { ...m, resolvedLinks: match.links || [] } : m;
+            }),
+          };
+        });
+      }
+
+      const doneMsg = updatedCount > 0 ? `${t.recheck_updated} ${updatedCount}` : t.recheck_none;
+      if (editing?.id === containerId) {
+        setEditStatus({ text: doneMsg, type: 'success' });
+      } else {
+        setListStatus({ text: doneMsg, type: 'success' });
+      }
+    } catch (err) {
+      const errMsg = err.message || 'Failed to recheck filenames.';
+      if (editing?.id === containerId) setEditStatus({ text: errMsg, type: 'error' });
+      else setListStatus({ text: errMsg, type: 'error' });
+    } finally {
+      setRecheckingId(null);
+    }
   }
 
   async function handleSaveEdit(e) {
     e.preventDefault();
     if (!editing || !apiKey) return;
-    if (!editing.title.trim()) {
-      setEditStatus({ text: 'Title cannot be empty.', type: 'error' });
+
+    let body;
+    try {
+      body = buildUpdateContainerPayload({
+        title: editing.title,
+        description: editing.description,
+        isProtected: editing.isProtected,
+        password: editing.password,
+        mirrors: (editing.mirrors || []).map(m => ({ name: m.name, links: m.linksText })),
+      });
+    } catch (err) {
+      setEditStatus({ text: err.message, type: 'error' });
       return;
     }
+
     setEditSaving(true);
     setEditStatus({ text: t.status_saving, type: 'loading' });
-
-    const body = {
-      title: editing.title.trim(),
-      description: editing.description.trim(),
-      isProtected: Boolean(editing.isProtected),
-    };
-    if (editing.isProtected && editing.password.trim()) {
-      body.password = editing.password.trim();
-    }
 
     try {
       const res = await fetch(`/api/pearcrypt?id=${encodeURIComponent(editing.id)}`, {
@@ -778,6 +927,22 @@ export default function PearcryptPage() {
                                     0 {t.mirror_many}
                                   </div>
                                 )}
+                                <div style={{ marginTop: 10, paddingTop: 8, borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'flex-end' }}>
+                                  <button
+                                    type="button"
+                                    className="neo-btn neo-btn-subtle"
+                                    style={{ padding: '4px 10px', fontSize: 11 }}
+                                    onClick={() => handleRecheckFilenames(c.id)}
+                                    disabled={recheckingId === c.id || getRecheckCooldownSeconds(c.id) > 0}
+                                  >
+                                    <IconRefresh size={12} />
+                                    {recheckingId === c.id
+                                      ? t.rechecking
+                                      : getRecheckCooldownSeconds(c.id) > 0
+                                        ? `${getRecheckCooldownSeconds(c.id)}s`
+                                        : t.recheck_btn}
+                                  </button>
+                                </div>
                               </div>
                             )}
                           </div>
@@ -856,7 +1021,7 @@ export default function PearcryptPage() {
             role="dialog"
             aria-modal="true"
             aria-label={t.edit_modal_title}
-            className="neo-modal-box"
+            className="neo-modal-box neo-modal-wide"
             onClick={e => e.stopPropagation()}
           >
             <div className="neo-modal-head">
@@ -873,17 +1038,19 @@ export default function PearcryptPage() {
             </div>
             <form onSubmit={handleSaveEdit} className="neo-modal-body">
               <div className="form-field">
-                <label className="form-label">{t.edit_title}</label>
+                <label htmlFor="edit-container-title" className="form-label">{t.edit_title}</label>
                 <input
+                  id="edit-container-title"
                   type="text"
                   value={editing.title}
                   onChange={e => setEditing({ ...editing, title: e.target.value })}
                 />
               </div>
               <div className="form-field">
-                <label className="form-label">{t.edit_desc}</label>
+                <label htmlFor="edit-container-desc" className="form-label">{t.edit_desc}</label>
                 <textarea
-                  rows={3}
+                  id="edit-container-desc"
+                  rows={2}
                   value={editing.description}
                   onChange={e => setEditing({ ...editing, description: e.target.value })}
                 />
@@ -900,8 +1067,9 @@ export default function PearcryptPage() {
               </div>
               {editing.isProtected && (
                 <div className="form-field">
-                  <label className="form-label">{t.edit_new_pw}</label>
+                  <label htmlFor="edit-container-pw" className="form-label">{t.edit_new_pw}</label>
                   <input
+                    id="edit-container-pw"
                     type="text"
                     className="mono"
                     placeholder={t.edit_new_pw_ph}
@@ -910,6 +1078,105 @@ export default function PearcryptPage() {
                   />
                 </div>
               )}
+
+              {/* Mirrors & Recheck Filenames */}
+              <div className="form-field" style={{ marginTop: 14 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8, marginBottom: 10 }}>
+                  <span className="form-label" style={{ marginBottom: 0 }}>{t.edit_mirrors}</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                    <button
+                      type="button"
+                      className="neo-btn neo-btn-subtle"
+                      style={{ padding: '4px 10px', fontSize: 11 }}
+                      onClick={() => handleRecheckFilenames(editing.id)}
+                      disabled={recheckingId === editing.id || getRecheckCooldownSeconds(editing.id) > 0}
+                    >
+                      <IconRefresh size={12} />
+                      {recheckingId === editing.id
+                        ? t.rechecking
+                        : getRecheckCooldownSeconds(editing.id) > 0
+                          ? `${getRecheckCooldownSeconds(editing.id)}s`
+                          : t.recheck_btn}
+                    </button>
+                    <button
+                      type="button"
+                      className="neo-btn neo-btn-subtle"
+                      style={{ padding: '4px 10px', fontSize: 11 }}
+                      onClick={addEditMirror}
+                    >
+                      <IconPlus size={12} />
+                      {t.add_mirror}
+                    </button>
+                  </div>
+                </div>
+
+                {(editing.mirrors || []).map((m, mi) => (
+                  <div
+                    key={m.id}
+                    style={{
+                      background: 'var(--surface-2)',
+                      border: '1px solid var(--border)',
+                      borderRadius: 'var(--radius-sm)',
+                      padding: 12,
+                      marginBottom: mi < editing.mirrors.length - 1 ? 12 : 0,
+                    }}
+                  >
+                    <div className="input-group" style={{ marginBottom: 8 }}>
+                      <input
+                        type="text"
+                        aria-label={`${t.edit_mirrors} ${mi + 1}`}
+                        value={m.name}
+                        onChange={e => updateEditMirrorName(mi, e.target.value)}
+                      />
+                      {editing.mirrors.length > 1 && (
+                        <button
+                          type="button"
+                          className="neo-btn neo-btn-danger"
+                          style={{ padding: '6px 10px' }}
+                          onClick={() => removeEditMirror(mi)}
+                          aria-label={`Remove mirror ${mi + 1}`}
+                        >
+                          <IconTrash size={13} />
+                        </button>
+                      )}
+                    </div>
+
+                    <label htmlFor={`edit-mirror-links-${mi}`} className="form-label" style={{ fontSize: 11.5, color: 'var(--text-dim)' }}>
+                      {t.edit_links_label}
+                    </label>
+                    <textarea
+                      id={`edit-mirror-links-${mi}`}
+                      rows={4}
+                      className="mono"
+                      placeholder="https://..."
+                      value={m.linksText}
+                      onChange={e => updateEditMirrorLinks(mi, e.target.value)}
+                    />
+                    <p className="field-hint" style={{ marginTop: 4 }}>{t.edit_links_hint}</p>
+
+                    {Array.isArray(m.resolvedLinks) && m.resolvedLinks.length > 0 && (
+                      <div
+                        style={{
+                          marginTop: 8,
+                          padding: '8px 10px',
+                          borderRadius: 4,
+                          background: 'var(--input-bg)',
+                          border: '1px solid var(--border)',
+                        }}
+                      >
+                        <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-dim)', marginBottom: 4 }}>
+                          {t.resolved_files} ({m.resolvedLinks.length})
+                        </div>
+                        {m.resolvedLinks.map((lnk, li) => (
+                          <div key={lnk.id || li} className="mono" style={{ fontSize: 11, color: lnk.file_name ? 'var(--text)' : 'var(--text-muted)', wordBreak: 'break-all' }}>
+                            &bull; {lnk.file_name || t.pending_filename}{lnk.file_size ? ` (${lnk.file_size})` : ''}{lnk.host_name ? ` · ${lnk.host_name}` : ''}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
 
               {editStatus.text && (
                 <div className={`status-banner show ${editStatus.type}`} style={{ marginBottom: 12 }}>

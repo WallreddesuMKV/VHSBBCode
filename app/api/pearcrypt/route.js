@@ -1,5 +1,9 @@
 import { NextResponse } from 'next/server';
-import { requestPearcrypt } from '../../utils/pearcrypt';
+import {
+  PEARCRYPT_DASHBOARD_API_BASE,
+  buildUpdateContainerPayload,
+  requestPearcrypt,
+} from '../../utils/pearcrypt';
 import { requireVerifiedUser } from '../../utils/requireAuth';
 
 export const maxDuration = 60;
@@ -14,7 +18,7 @@ function validateId(id) {
   return Boolean(id && SAFE_ID.test(id));
 }
 
-async function forward(method, path, apiKey, body) {
+async function forward(method, path, apiKey, body, options = {}) {
   const { user, supabase, response: authError } = await requireVerifiedUser();
   if (authError) return authError;
 
@@ -37,7 +41,7 @@ async function forward(method, path, apiKey, body) {
     );
   }
 
-  const { status, data } = await requestPearcrypt(method, path, resolvedKey, body);
+  const { status, data } = await requestPearcrypt(method, path, resolvedKey, body, options);
   return NextResponse.json(data, { status });
 }
 
@@ -87,7 +91,30 @@ export async function PUT(request) {
     return NextResponse.json({ error: 'Invalid JSON request body.' }, { status: 400 });
   }
 
+  if (Array.isArray(body?.mirrors)) {
+    let normalized;
+    try {
+      normalized = buildUpdateContainerPayload(body);
+    } catch (err) {
+      return NextResponse.json({ error: err.message || 'Invalid container update payload.' }, { status: 400 });
+    }
+    return forward('PUT', `/containers/${id}`, getApiKey(request), normalized, {
+      apiBase: PEARCRYPT_DASHBOARD_API_BASE,
+    });
+  }
+
   return forward('PUT', `/containers/${id}`, getApiKey(request), body);
+}
+
+export async function PATCH(request) {
+  const { searchParams } = new URL(request.url);
+  const id = searchParams.get('id');
+  if (!validateId(id)) {
+    return NextResponse.json({ error: 'Valid container ID is required.' }, { status: 400 });
+  }
+  return forward('PATCH', `/containers/${id}`, getApiKey(request), undefined, {
+    apiBase: PEARCRYPT_DASHBOARD_API_BASE,
+  });
 }
 
 export async function DELETE(request) {

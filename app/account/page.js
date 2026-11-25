@@ -9,6 +9,7 @@ import { DISCORD_OAUTH_SCOPES, isVerifiedUser } from '../utils/discordAuth';
 import {
   IconAccount,
   IconDiscord,
+  IconMegaphone,
   IconSave,
   IconCopy,
   IconTrash,
@@ -16,6 +17,7 @@ import {
   IconCheck
 } from '../components/Icons';
 import { copyToClipboard } from '../utils/clipboard';
+import { MAX_ANNOUNCEMENT_LENGTH, resolveLoginBanner } from '../utils/announcement';
 import { useLang } from '../utils/useLang';
 
 export default function AccountPage() {
@@ -25,9 +27,13 @@ export default function AccountPage() {
   const [supabase, setSupabase] = useState(null);
   const [user, setUser] = useState(null);
   const [savedBBCodes, setSavedBBCodes] = useState([]);
-  const [activeTab, setActiveTab] = useState('bbcodes'); // 'bbcodes' | 'apikeys'
+  const [activeTab, setActiveTab] = useState('bbcodes'); // 'bbcodes' | 'apikeys' | 'settings'
   const [statusMsg, setStatusMsg] = useState({ text: '', type: '' });
   const [copiedId, setCopiedId] = useState(null);
+  const [announcementDraft, setAnnouncementDraft] = useState('');
+  const [savedAnnouncement, setSavedAnnouncement] = useState('');
+  const [crackwatchPreview, setCrackwatchPreview] = useState([]);
+  const [savingAnnouncement, setSavingAnnouncement] = useState(false);
 
   // Per-user isolated API keys state
   const [apiKeys, setApiKeys] = useState({
@@ -41,10 +47,21 @@ export default function AccountPage() {
   useEffect(() => {
     try {
       const tabParam = new URLSearchParams(window.location.search).get('tab');
-      if (tabParam === 'apikeys' || tabParam === 'bbcodes') {
+      if (tabParam === 'apikeys' || tabParam === 'bbcodes' || tabParam === 'settings') {
         setActiveTab(tabParam);
       }
     } catch {}
+
+    fetch('/api/announcement', { cache: 'no-store' })
+      .then(r => (r.ok ? r.json() : null))
+      .then(data => {
+        if (!data) return;
+        const msg = String(data.message || '');
+        setAnnouncementDraft(msg);
+        setSavedAnnouncement(msg);
+        if (Array.isArray(data.news)) setCrackwatchPreview(data.news);
+      })
+      .catch(() => {});
 
     const client = createBrowserSupabase();
     if (client) {
@@ -337,6 +354,39 @@ export default function AccountPage() {
     setTimeout(() => setStatusMsg({ text: '', type: '' }), 4000);
   }
 
+  async function handleSaveAnnouncement(clear = false) {
+    if (!user?.verified) {
+      showToast(t.ann_repacker_only, 'error');
+      return;
+    }
+    setSavingAnnouncement(true);
+    const nextMessage = clear ? '' : announcementDraft.trim().slice(0, MAX_ANNOUNCEMENT_LENGTH);
+    try {
+      const res = await fetch('/api/announcement', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: nextMessage }),
+      });
+      const json = await res.json().catch(() => null);
+      if (!res.ok) {
+        throw new Error(json?.error || `Failed to update announcement (${res.status})`);
+      }
+      const persisted = String(json?.message || '');
+      setAnnouncementDraft(persisted);
+      setSavedAnnouncement(persisted);
+      try {
+        localStorage.setItem('bbcode_login_announcement', JSON.stringify({ ...json, news: crackwatchPreview }));
+      } catch {}
+      showToast(persisted ? t.ann_saved : t.ann_cleared, 'success');
+    } catch (err) {
+      showToast(err.message || 'Failed to save announcement.', 'error');
+    } finally {
+      setSavingAnnouncement(false);
+    }
+  }
+
+  const previewBanner = resolveLoginBanner({ message: announcementDraft }, crackwatchPreview, 0);
+
   return (
     <>
       <Header currentLang={lang} onLangChange={setLang} />
@@ -382,7 +432,7 @@ export default function AccountPage() {
         </div>
 
         {/* Tab Navigation */}
-        <div className="source-switch" style={{ maxWidth: 420, gridTemplateColumns: '1fr 1fr', marginBottom: 20 }}>
+        <div className="source-switch" style={{ maxWidth: 560, gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', marginBottom: 20 }}>
           <button
             type="button"
             className={`source-btn ${activeTab === 'bbcodes' ? 'active' : ''}`}
@@ -396,6 +446,13 @@ export default function AccountPage() {
             onClick={() => setActiveTab('apikeys')}
           >
             {t.tab_keys}
+          </button>
+          <button
+            type="button"
+            className={`source-btn ${activeTab === 'settings' ? 'active' : ''}`}
+            onClick={() => setActiveTab('settings')}
+          >
+            {t.tab_settings}
           </button>
         </div>
 
@@ -555,6 +612,93 @@ export default function AccountPage() {
                   <IconSave size={14} />
                   {t.save_keys}
                 </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Tab 3: Settings (Login Announcement) */}
+        {activeTab === 'settings' && (
+          <div className="neo-card" style={{ maxWidth: 680 }}>
+            <div className="neo-card-header">
+              <span className="neo-card-title">
+                <IconMegaphone size={14} />
+                {t.ann_title}
+              </span>
+            </div>
+            <div className="neo-card-body">
+              <p className="field-hint" style={{ marginTop: 0, marginBottom: 16 }}>
+                {t.ann_hint}
+              </p>
+
+              {!user?.verified && (
+                <div className="status-banner show error" style={{ marginTop: 0, marginBottom: 16 }}>
+                  {t.ann_repacker_only}
+                </div>
+              )}
+
+              <div className="form-field">
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 8 }}>
+                  <label htmlFor="login-announcement-input" className="form-label">{t.ann_label}</label>
+                  <span className="mono" style={{ fontSize: 11.5, color: 'var(--text-muted)' }}>
+                    {announcementDraft.length}/{MAX_ANNOUNCEMENT_LENGTH}
+                  </span>
+                </div>
+                <textarea
+                  id="login-announcement-input"
+                  rows={3}
+                  maxLength={MAX_ANNOUNCEMENT_LENGTH}
+                  placeholder={t.ann_ph}
+                  value={announcementDraft}
+                  onChange={e => setAnnouncementDraft(e.target.value)}
+                  disabled={!user?.verified || savingAnnouncement}
+                />
+              </div>
+
+              <div className="form-field" style={{ marginTop: 14 }}>
+                <span className="form-label">{t.ann_preview_label}</span>
+                <div className={`login-wire login-wire-preview ${previewBanner.isAnnouncement ? 'is-announcement' : ''}`}>
+                  <div className="login-wire-inner">
+                    <div className="login-wire-body">
+                      <span className="login-wire-label">
+                        {previewBanner.isAnnouncement ? dict.login.announcement_badge : dict.login.crackwatch_badge}
+                      </span>
+                      <span className="login-wire-sep" aria-hidden="true">/</span>
+                      {previewBanner.text ? (
+                        <>
+                          <span className="login-wire-text">{previewBanner.title}</span>
+                          {!previewBanner.isAnnouncement && previewBanner.meta && (
+                            <span className="login-wire-meta">{previewBanner.meta}</span>
+                          )}
+                        </>
+                      ) : (
+                        <span className="login-wire-meta">{t.ann_loading_news}</span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="actions-bar" style={{ marginTop: 20 }}>
+                <button
+                  type="button"
+                  className="neo-btn neo-btn-primary"
+                  onClick={() => handleSaveAnnouncement(false)}
+                  disabled={!user?.verified || savingAnnouncement}
+                >
+                  <IconSave size={14} />
+                  {savingAnnouncement ? t.ann_saving : t.ann_save}
+                </button>
+                {(savedAnnouncement || announcementDraft) && (
+                  <button
+                    type="button"
+                    className="neo-btn neo-btn-subtle"
+                    onClick={() => handleSaveAnnouncement(true)}
+                    disabled={!user?.verified || savingAnnouncement}
+                  >
+                    {t.ann_clear}
+                  </button>
+                )}
               </div>
             </div>
           </div>

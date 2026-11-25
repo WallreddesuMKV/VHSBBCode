@@ -10,6 +10,7 @@ import {
 } from '../components/Icons';
 import { createBrowserSupabase } from '../utils/supabaseClient';
 import { DISCORD_OAUTH_SCOPES, sanitizeNextPath } from '../utils/discordAuth';
+import { resolveLoginBanner } from '../utils/announcement';
 import { useLang } from '../utils/useLang';
 
 function getAvailableThemes(date = new Date()) {
@@ -26,6 +27,10 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [availableThemes, setAvailableThemes] = useState(['dark', 'light']);
   const [theme, setTheme] = useState('dark');
+  const [announcementData, setAnnouncementData] = useState({ message: '', updatedBy: null });
+  const [newsItems, setNewsItems] = useState([]);
+  const [newsIdx, setNewsIdx] = useState(0);
+  const [wirePaused, setWirePaused] = useState(false);
   const themeTimerRef = useRef(null);
 
   useEffect(() => {
@@ -39,7 +44,48 @@ export default function LoginPage() {
     setAvailableThemes(allowed);
     setTheme(resolved);
     document.documentElement.setAttribute('data-theme', resolved);
+
+    try {
+      const cached = localStorage.getItem('bbcode_login_announcement');
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        setAnnouncementData(parsed);
+        if (Array.isArray(parsed.news) && parsed.news.length > 0) {
+          setNewsItems(parsed.news);
+        }
+      }
+    } catch {}
+
+    let active = true;
+    fetch('/api/announcement', { cache: 'no-store' })
+      .then(r => (r.ok ? r.json() : null))
+      .then(data => {
+        if (!active || !data) return;
+        try {
+          localStorage.setItem('bbcode_login_announcement', JSON.stringify(data));
+        } catch {}
+        setAnnouncementData(data);
+        const list = Array.isArray(data.news) ? data.news : [];
+        setNewsItems(list);
+        if (list.length > 1) {
+          const freshPool = Math.min(list.length, 10);
+          setNewsIdx(Math.floor(Math.random() * freshPool));
+        }
+      })
+      .catch(() => {});
+
+    return () => { active = false; };
   }, []);
+
+  const banner = resolveLoginBanner(announcementData, newsItems, newsIdx);
+
+  useEffect(() => {
+    if (banner.isAnnouncement || newsItems.length <= 1 || wirePaused) return;
+    const timer = setInterval(() => {
+      setNewsIdx(prev => (prev + 1) % newsItems.length);
+    }, 6500);
+    return () => clearInterval(timer);
+  }, [banner.isAnnouncement, newsItems.length, wirePaused]);
 
   const handleSelectLang = (newLang) => {
     setLang(newLang);
@@ -132,6 +178,61 @@ export default function LoginPage() {
           </button>
         </div>
       </header>
+
+      {banner.text && (
+        <aside
+          className={`login-wire ${banner.isAnnouncement ? 'is-announcement' : ''}`}
+          aria-label={banner.isAnnouncement ? t.announcement_badge : t.crackwatch_badge}
+          onMouseEnter={() => setWirePaused(true)}
+          onMouseLeave={() => setWirePaused(false)}
+          onFocus={() => setWirePaused(true)}
+          onBlur={() => setWirePaused(false)}
+        >
+          <div className="login-wire-inner">
+            <span className="login-wire-label">
+              {banner.isAnnouncement ? t.announcement_badge : t.crackwatch_badge}
+            </span>
+            <span className="login-wire-sep" aria-hidden="true">/</span>
+            <div key={banner.isAnnouncement ? 'notice' : `${newsIdx}-${banner.title}`} className="login-wire-track">
+              {banner.isAnnouncement ? (
+                <span className="login-wire-text">{banner.text}</span>
+              ) : (
+                <>
+                  {banner.url ? (
+                    <a
+                      href={banner.url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="login-wire-link"
+                    >
+                      {banner.title}
+                    </a>
+                  ) : (
+                    <span className="login-wire-text">{banner.title}</span>
+                  )}
+                  {banner.info && <span className="login-wire-meta">{banner.info}</span>}
+                </>
+              )}
+            </div>
+            {!banner.isAnnouncement && banner.crackDate && (
+              <time
+                key={`date-${newsIdx}`}
+                dateTime={banner.crackDate}
+                className="login-wire-date"
+              >
+                {banner.crackDate}
+              </time>
+            )}
+          </div>
+          {!banner.isAnnouncement && newsItems.length > 1 && (
+            <span
+              key={`prog-${newsIdx}`}
+              className={`login-wire-progress ${wirePaused ? 'paused' : ''}`}
+              aria-hidden="true"
+            />
+          )}
+        </aside>
+      )}
 
       <main id="main-content" className="login-main">
         <div className="login-grid">

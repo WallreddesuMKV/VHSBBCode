@@ -179,6 +179,7 @@ html.theme-transitioning .page-header,
 html.theme-transitioning .login-topbar,
 html.theme-transitioning .login-panel,
 html.theme-transitioning .login-panel-head,
+html.theme-transitioning .login-wire,
 html.theme-transitioning input,
 html.theme-transitioning textarea,
 html.theme-transitioning select {
@@ -1066,6 +1067,11 @@ textarea {
   box-shadow: var(--shadow-overlay);
 }
 
+/* Wide modal variant keeps multi-line mirror URLs legible without mid-path wrapping */
+.neo-modal-box.neo-modal-wide {
+  max-width: 680px;
+}
+
 .neo-modal-head {
   background: var(--surface);
   border-bottom: 1px solid var(--border);
@@ -1542,7 +1548,157 @@ textarea {
   font-size: 14px;
 }
 
+/* Flush hairline editorial wire aligned to login-topbar's 1080px measure */
+@keyframes login-wire-enter {
+  from {
+    opacity: 0;
+    transform: translateY(5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes login-wire-progress {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}
+
+.login-wire {
+  position: relative;
+  width: 100%;
+  max-width: 1080px;
+  margin: 0 auto;
+  border-bottom: 1px solid var(--border);
+  background: transparent;
+}
+
+.login-wire.is-announcement {
+  background: var(--accent-soft);
+  border-bottom-color: var(--accent-border);
+}
+
+.login-wire-inner {
+  width: 100%;
+  padding: 11px 28px;
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.login-wire-body,
+.login-wire-track {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-width: 0;
+  flex: 1;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.login-wire-track {
+  animation: login-wire-enter 0.36s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.login-wire-label {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--accent-text);
+  flex-shrink: 0;
+}
+
+.login-wire.is-announcement .login-wire-label {
+  color: var(--accent-soft-text);
+}
+
+.login-wire-sep {
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  user-select: none;
+  flex-shrink: 0;
+}
+
+.login-wire-text,
+.login-wire-link {
+  color: var(--text-white);
+  font-weight: 500;
+  text-decoration: none;
+  word-break: break-word;
+}
+
+.login-wire-link:hover {
+  color: var(--accent-text);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.login-wire-meta {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  color: var(--text-dim);
+}
+
+.login-wire-date {
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+  animation: login-wire-enter 0.36s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.login-wire-progress {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 1px;
+  background: var(--accent);
+  opacity: 0.65;
+  transform-origin: left center;
+  animation: login-wire-progress 6.5s linear forwards;
+  pointer-events: none;
+}
+
+.login-wire-progress.paused {
+  animation-play-state: paused;
+}
+
+.login-wire-preview {
+  max-width: none;
+  border-top: 1px solid var(--border);
+}
+
+.login-wire-preview .login-wire-inner {
+  padding: 10px 12px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .login-wire-track,
+  .login-wire-date,
+  .login-wire-progress {
+    animation: none;
+  }
+}
+
 @media (max-width: 859px) {
+  .login-wire-inner {
+    padding: 10px 16px;
+    flex-wrap: wrap;
+    row-gap: 4px;
+  }
+
+  .login-wire-date {
+    margin-left: 0;
+  }
   .login-topbar {
     padding: 14px 16px;
   }
