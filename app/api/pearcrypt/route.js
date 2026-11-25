@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
-import { PEARCRYPT_API_BASE } from '../../utils/pearcrypt';
+import { requestPearcrypt } from '../../utils/pearcrypt';
 import { requireVerifiedUser } from '../../utils/requireAuth';
+
+export const maxDuration = 60;
 
 const SAFE_ID = /^[a-zA-Z0-9_-]{1,128}$/;
 
@@ -35,43 +37,8 @@ async function forward(method, path, apiKey, body) {
     );
   }
 
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 12000);
-
-  try {
-    const headers = {
-      Authorization: `Bearer ${resolvedKey}`,
-      Accept: 'application/json',
-    };
-    const init = { method, headers, signal: controller.signal };
-    if (body !== undefined) {
-      headers['Content-Type'] = 'application/json';
-      init.body = JSON.stringify(body);
-    }
-
-    const res = await fetch(`${PEARCRYPT_API_BASE}${path}`, init);
-    const text = await res.text();
-    let json = null;
-    try {
-      json = text ? JSON.parse(text) : null;
-    } catch (e) {}
-
-    if (!res.ok) {
-      return NextResponse.json(
-        { error: json?.error || json?.message || `Pearcrypt API error (${res.status})` },
-        { status: res.status }
-      );
-    }
-
-    return NextResponse.json(json ?? { success: true }, { status: res.status });
-  } catch (err) {
-    return NextResponse.json(
-      { error: err.name === 'AbortError' ? 'Pearcrypt API request timed out.' : (err.message || 'Pearcrypt request failed.') },
-      { status: 502 }
-    );
-  } finally {
-    clearTimeout(timer);
-  }
+  const { status, data } = await requestPearcrypt(method, path, resolvedKey, body);
+  return NextResponse.json(data, { status });
 }
 
 export async function GET(request) {
