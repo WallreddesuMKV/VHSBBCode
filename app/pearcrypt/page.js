@@ -283,7 +283,9 @@ export default function PearcryptPage() {
       setMirrors([makeEmptyMirror(1)]);
       fetchContainers();
     } catch (err) {
-      setFormStatus({ text: err.message || 'Failed to create container.', type: 'error' });
+      const msg = err.message || 'Failed to create container.';
+      setFormStatus({ text: msg, type: 'error' });
+      if (/timed out|timeout/i.test(msg)) fetchContainers();
     } finally {
       setCreating(false);
     }
