@@ -14,7 +14,7 @@ import {
   writeLocalAnnouncementFile,
 } from '../../utils/announcementStore';
 
-const SETTINGS_TABLE = 'site_settings';
+const SETTINGS_TABLE = 'bbcode_site_settings';
 const LOCAL_FALLBACK_FILE = path.join(process.cwd(), '.data', 'announcement.json');
 
 // ponytail: module-scope fallback covers local/offline dev when Supabase env vars are absent
@@ -75,7 +75,7 @@ async function saveAnnouncement(record, userSupabase) {
 
     if (error) {
       if (isMissingTableError(error)) {
-        throw new Error('Table public.site_settings not found. Run supabase_site_settings.sql in Supabase SQL Editor.');
+        throw new Error('Table public.bbcode_site_settings not found. Run supabase_site_settings.sql in Supabase SQL Editor.');
       }
       throw new Error(error.message || 'Failed to save announcement to Supabase.');
     }
@@ -84,7 +84,7 @@ async function saveAnnouncement(record, userSupabase) {
 
   try {
     await writeLocalAnnouncementFile(LOCAL_FALLBACK_FILE, normalized);
-  } catch {}
+  } catch { }
   return normalized;
 }
 
